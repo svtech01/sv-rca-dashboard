@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import * as csv from "csv-parse/sync";
 import { supabase } from "@/lib/supabaseServerClient";
 
+const FILE_MAP: Record<string, string> = {
+  "Kixie Call History": "kixie_call_history.csv",
+  "Telesign (With Live)": "telesign_with_live.csv",
+  "Telesign (Without Live)": "telesign_without_live.csv",
+  "Powerlist Contacts": "powerlist_contacts.csv",
+};
+
 export const runtime = "nodejs"; // ensure full file system + buffer support
 
 export async function POST(req: Request) {
@@ -151,11 +158,18 @@ export async function POST(req: Request) {
 
     // ✅ Save to Supabase Storage
     const bucket = "data-files";
-    const filePath = `${fileType}/${file.name}`;
+    const filePath = fileType;
+    const _fileType = (formData.get("file_type") as string);
+
+    const fileName = FILE_MAP[_fileType];
+    if (!fileName) {
+      console.error("❌ Invalid file type:", _fileType);
+      return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(filePath, buffer, {
+      .upload(fileName, buffer, {
         contentType: "text/csv",
         upsert: true,
       });

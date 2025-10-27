@@ -48,11 +48,15 @@ export default function DashboardPage() {
 
   const [data, setData] = useState<any>(null);
 
+  const fetchMetrics = async () => {
+    const res = await fetch("/api/dashboard");
+    const records = await res.json();
+    setData(records)
+    console.log(records)
+  }
+
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((res) => res.json())
-      .then((data) => setData(data))
-      .catch(console.error);
+    fetchMetrics()
   }, []);
 
   if (!data) return <p>Loading metrics...</p>;
