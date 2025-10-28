@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import LoadingSection from "@/components/LoadingSection";
 
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null);
@@ -26,7 +29,7 @@ export default function DashboardPage() {
     fetchMetrics();
   }, []);
 
-  if (!data) return <p>Loading metrics...</p>;
+  if (!data) return <LoadingSection />;
 
   // Extract results from API
   const baseline = data.baseline || {};

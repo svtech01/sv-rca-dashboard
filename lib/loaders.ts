@@ -66,15 +66,16 @@ export async function loadTelesign(withUrl?: string, withoutUrl?: string): Promi
         r["is_reachable"] ??
         r["reachable"] ??
         r["live"] ??
-        (url.toLowerCase().includes("with") ? true : false),
+        (url.toLowerCase().includes("with_live") ? true : false),
       carrier: r["carrier"] || r["phone_carrier"] || "Unknown",
       riskLevel: r["risk_level"] || r["risk"] || "Unknown",
       validationType: r["validation_type"] || r["validation"] || "Unknown",
-      source_file: url.toLowerCase().includes("with") ? "with_live" : "without_live",
+      source_file: url.toLowerCase().includes("with_live") ? "with_live" : "without_live",
       phoneNormalized: normalizePhonesLast10(
         r["phone_e164"] || r["contact_mobile_phone"] || r["phone"]
       ),
     }));
+    
     allRows.push(...normalized);
   }
 

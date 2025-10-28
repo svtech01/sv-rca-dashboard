@@ -124,8 +124,10 @@ export class ValidationMerger {
 
     let validatedDialedCount = 0;
     if (this.kixie.length) {
-      const telesignPhones = new Set(this.telesign.map((r) => r.phoneNormalized));
-      validatedDialedCount = this.kixie.filter((r) => telesignPhones.has(r.phoneNormalized)).length;
+      const validatedDialed = this.telesign.filter(t =>
+        this.kixie.some(k => k.phoneNormalized === t.phoneNormalized)
+      );
+      const validatedDialedCount = validatedDialed.length;
     }
 
     return {
