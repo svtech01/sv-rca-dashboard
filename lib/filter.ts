@@ -6,11 +6,11 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-dayjs.extend(isBetween);
 dayjs.extend(customParseFormat);
+dayjs.extend(isBetween);
 
-// Always default to Asia/Manila
 const TZ = "Asia/Manila";
+const FORMATS = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY"];
 
 export function filterByDateRange<T extends Record<string, any>>(
   data: T[],
@@ -20,36 +20,36 @@ export function filterByDateRange<T extends Record<string, any>>(
   if (!data?.length || filter === "all") return data;
 
   const now = dayjs().tz(TZ);
-  const startOfDay = now.startOf("day");
-  const startOfWeek = now.startOf("week");
-  const startOfMonth = now.startOf("month");
+  let start: dayjs.Dayjs;
+
+  if (filter === "today") start = now.startOf("day");
+  else if (filter === "week") start = now.subtract(7, "day").startOf("day");
+  else start = now.subtract(30, "day").startOf("day");
+
+  const end = now.endOf("day");
 
   return data.filter((row) => {
-    const rawDate = row[dateKey];
-    if (!rawDate) return false;
+    const raw = row[dateKey];
+    if (!raw) return false;
 
-    const formats = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY"];
-    let date: dayjs.Dayjs | null = null;
+    let parsed: dayjs.Dayjs | null = null;
 
-    for (const fmt of formats) {
-      const parsed = dayjs(rawDate, fmt).tz(TZ);
-      if (parsed.isValid()) {
-        date = parsed;
-        break;
-      }
+    // Only try minimal known formats (fastest path)
+    for (let i = 0; i < FORMATS.length; i++) {
+      parsed = dayjs(raw, FORMATS[i]);
+      if (parsed.isValid()) break;
     }
 
-    if (!date) return false;
+    if (!parsed || !parsed.isValid()) return false;
 
-    switch (filter) {
-      case "today":
-        return date.isSame(now, "day");
-      case "week":
-        return date.isAfter(startOfWeek);
-      case "month":
-        return date.isAfter(startOfMonth);
-      default:
-        return true;
+    // Convert once to Manila timezone
+    parsed = parsed.tz(TZ);
+
+    if(filter === "today") {
+      return parsed.isSame(start);
+    }else{
+      return parsed.isAfter(start) && parsed.isBefore(end);
     }
+
   });
 }
