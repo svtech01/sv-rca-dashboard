@@ -28,6 +28,8 @@ export function filterByDateRange<T extends Record<string, any>>(
 
   const end = now.endOf("day");
 
+  console.log(`📂Filtering from ${start.toDate()} to ${end.toDate()}`);
+
   return data.filter((row) => {
     const raw = row[dateKey];
     if (!raw) return false;
