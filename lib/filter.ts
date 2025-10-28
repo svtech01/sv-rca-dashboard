@@ -10,6 +10,9 @@ dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
 
 const TZ = "Asia/Manila";
+
+dayjs.tz.setDefault(TZ);
+
 const FORMATS = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY"];
 
 export function filterByDateRange<T extends Record<string, any>>(
