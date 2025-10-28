@@ -9,6 +9,8 @@ dayjs.extend(timezone);
 dayjs.extend(isBetween);
 dayjs.extend(customParseFormat);
 
+dayjs.tz.setDefault("Asia/Manila");
+
 export function filterByDateRange<T extends Record<string, any>>(
   data: T[],
   filter: "all" | "today" | "week" | "month" = "all",
