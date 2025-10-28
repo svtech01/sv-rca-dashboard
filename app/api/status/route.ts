@@ -6,6 +6,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export async function GET() {
+  
   const systemDate = new Date();
   const utcDate = dayjs().utc().format();
   const manilaDate = dayjs().tz("Asia/Manila").format();

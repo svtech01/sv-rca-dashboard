@@ -9,7 +9,8 @@ dayjs.extend(timezone);
 dayjs.extend(isBetween);
 dayjs.extend(customParseFormat);
 
-dayjs.tz.setDefault("Asia/Manila");
+// Always default to Asia/Manila
+const TZ = "Asia/Manila";
 
 export function filterByDateRange<T extends Record<string, any>>(
   data: T[],
@@ -18,10 +19,7 @@ export function filterByDateRange<T extends Record<string, any>>(
 ): T[] {
   if (!data?.length || filter === "all") return data;
 
-  const now = dayjs().tz("Asia/Manila");
-
-  console.log("Filtering by date:", now)
-
+  const now = dayjs().tz(TZ);
   const startOfDay = now.startOf("day");
   const startOfWeek = now.startOf("week");
   const startOfMonth = now.startOf("month");
@@ -30,12 +28,11 @@ export function filterByDateRange<T extends Record<string, any>>(
     const rawDate = row[dateKey];
     if (!rawDate) return false;
 
-    // Try parsing multiple formats
     const formats = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY"];
-    let date = null;
+    let date: dayjs.Dayjs | null = null;
 
     for (const fmt of formats) {
-      const parsed = dayjs(rawDate, fmt, true);
+      const parsed = dayjs.tz(rawDate, fmt, TZ);
       if (parsed.isValid()) {
         date = parsed;
         break;
