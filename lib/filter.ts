@@ -1,7 +1,11 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import isBetween from "dayjs/plugin/isBetween";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
 dayjs.extend(isBetween);
 dayjs.extend(customParseFormat);
 
@@ -12,7 +16,8 @@ export function filterByDateRange<T extends Record<string, any>>(
 ): T[] {
   if (!data?.length || filter === "all") return data;
 
-  const now = dayjs();
+  const now = dayjs().tz("Asia/Manila");
+
   const startOfDay = now.startOf("day");
   const startOfWeek = now.startOf("week");
   const startOfMonth = now.startOf("month");
