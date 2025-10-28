@@ -38,7 +38,7 @@ export function filterByDateRange<T extends Record<string, any>>(
 
     // Only try minimal known formats (fastest path)
     for (let i = 0; i < FORMATS.length; i++) {
-      parsed = dayjs(raw, FORMATS[i]);
+      parsed = dayjs(raw, FORMATS[i]).tz(TZ);
       if (parsed.isValid()) break;
     }
 
