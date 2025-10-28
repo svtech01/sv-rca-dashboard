@@ -1,90 +1,39 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import * as csv from "csv-parse/sync";
 import { supabase } from "@/lib/supabaseServerClient";
 
-const CACHE_TTL_MINUTES = 0; // cache for 30 minutes
+import { loadKixie, loadTelesign, loadPowerlist, loadCSVData } from "@/lib/loaders";
+import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
+import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
+import { CooldownManager } from "@/lib/metrics/CooldownManager";
 
-// --- Metrics helper functions ---
-function calculateBaselineMetrics(kixieData: any[]) {
-  if (!kixieData.length) return {};
-  const totalCalls = kixieData.length;
-  const connectedCalls = kixieData.filter(
-    (row) =>
-      String(row.Disposition || row.disposition || "").toLowerCase() ===
-      "connected"
-  ).length;
-  const connectRate = totalCalls ? (connectedCalls / totalCalls) * 100 : 0;
-
-  return {
-    connectRate: connectRate.toFixed(1) + "%",
-    totalCalls,
-    connectedCalls,
-  };
-}
-
-function calculatePilotMetrics(powerlistData: any[]) {
-  if (!powerlistData.length) return {};
-  const uniqueContacts = new Set(
-    powerlistData.map((r) => r["Phone Number"] || r.phone_number)
-  ).size;
-  const targetConnectRate = 30;
-  const uplift = 0;
-  return { uniqueContacts, targetConnectRate, uplift };
-}
-
-function calculateValidationMetrics(telesignData: any[]) {
-  if (!telesignData.length) return {};
-  const total = telesignData.length;
-  const reachable = telesignData.filter((r) => r.status === "reachable").length;
-  const invalid = telesignData.filter((r) => r.status === "invalid").length;
-  return {
-    total,
-    reachable,
-    invalid,
-    reachablePct: ((reachable / total) * 100).toFixed(1) + "%",
-    invalidPct: ((invalid / total) * 100).toFixed(1) + "%",
-  };
-}
-
-function calculateCooldownMetrics(powerlistData: any[]) {
-  if (!powerlistData.length) return {};
-  const cooldownContacts = powerlistData.filter(
-    (r) => Number(r["Attempt Count"] || 0) >= 10
-  ).length;
-  const reattemptPotential = Math.round(cooldownContacts * 0.2);
-  return { cooldownContacts, reattemptPotential };
-}
+const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
 
 // --- Load and parse CSVs ---
-async function loadCSVData() {
-  const bucket = "data-files";
-  const sources = [
-    { key: "kixie", path: "kixie/kixie.csv" },
-    { key: "powerlist", path: "powerlist/powerlist.csv" },
-    { key: "telesign", path: "telesign_with/telesign_with.csv" },
-  ];
+async function loadCSVDatax() {
+  // Fetch file paths from Supabase Storage
+  const { data: files, error } = await supabase.storage.from("data-files").list("");
+  if (error) throw error;
 
-  const data: Record<string, any[]> = {};
+  const findUrl = (keyword: string) => {
+    const file = files?.find((f) => f.name.toLowerCase().includes(keyword.toLowerCase()));
+    if (!file) return null;
+    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/data-files/${file.name}`;
+  };
 
-  for (const src of sources) {
-    const { data: fileData, error } = await supabase.storage
-      .from(bucket)
-      .download(src.path);
+  const urls = {
+    kixie: findUrl("kixie"),
+    telesignWith: findUrl("with_live"),
+    telesignWithout: findUrl("without_live"),
+    powerlist: findUrl("powerlist"),
+  };
 
-    if (error) {
-      console.warn(`Missing or unreadable file: ${src.path}`);
-      data[src.key] = [];
-      continue;
-    }
+  const [kixie, telesign, powerlist] = await Promise.all([
+    urls.kixie ? loadKixie(urls.kixie ?? undefined) : [],
+    loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
+    urls.powerlist ? loadPowerlist(urls.powerlist ?? undefined) : [],
+  ]);
 
-    const text = await fileData.text();
-    const parsed = csv.parse(text, { columns: true, skip_empty_lines: true });
-    data[src.key] = parsed;
-  }
-
-  return data;
+  return { kixie, telesign, powerlist };
 }
 
 // --- Main API route ---
@@ -116,22 +65,30 @@ export async function GET() {
     console.log("♻️ Cache expired, recomputing dashboard metrics...");
     const data = await loadCSVData();
 
+    const metricCalc = new MetricsCalculator(data);
+    const validationMerger = new ValidationMerger(data);
+    const cooldownManager = new CooldownManager(data);
+
     const metrics = {
-      baseline: calculateBaselineMetrics(data.kixie),
-      pilot: calculatePilotMetrics(data.powerlist),
-      validation: calculateValidationMetrics(data.telesign),
-      cooldown: calculateCooldownMetrics(data.powerlist),
+      baseline: metricCalc.calculateBaselineMetrics(),
+      pilot: metricCalc.calculatePilotMetrics(),
+      validation: validationMerger.calculateDataHygieneMetrics(),
+      cooldown: cooldownManager.calculateReattemptPotential(),
     };
 
     const now = new Date().toISOString();
 
     // 3️⃣ Save to cache
-    await supabase.from("dashboard_cache").insert({
+    const _cache = await supabase.from("dashboard_cache").upsert({
+      id: "dashboard_cache_latest",
       metrics,
+      // data,
       last_updated: now,
     });
 
-    console.log("✅ Dashboard metrics cached successfully");
+    if(_cache){
+      console.log("✅ Dashboard metrics cached successfully");
+    }
 
     return NextResponse.json({ ...metrics, last_updated: now, cached: false });
   } catch (err: any) {

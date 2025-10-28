@@ -3,63 +3,150 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-const sections = [
+export default function DashboardPage() {
+  const [data, setData] = useState<any>(null);
+
+  const fetchMetrics = async () => {
+    try {
+      console.log("Loading..")
+      const res = await fetch("/api/dashboard");
+      const records = await res.json();
+      console.log(records);
+      setData(records);
+      console.log("📊 Dashboard data loaded:", records);
+    } catch (err) {
+      console.error("❌ Failed to load dashboard:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMetrics();
+  }, []);
+
+  if (!data) return <p>Loading metrics...</p>;
+
+  // Extract results from API
+  const baseline = data.baseline || {};
+  const pilot = data.pilot || {};
+  const validation = data.validation || {};
+  const cooldown = data.cooldown || {};
+
+  // Build dynamic dashboard sections
+  const sections = [
     {
       title: "Baseline Metrics",
       metrics: [
-        { label: "Connect Rate", value: "0%", sub: "0 / 0 calls", color: "text-blue-600" },
-        { label: "Answer Event %", value: "0%", sub: "Approximated visibility", color: "text-blue-400" },
-        { label: "Avg Attempts Lost-Race", value: "0", sub: "Per contact", color: "text-yellow-500" },
-        { label: "Cooldown / Day", value: "0", sub: "Contacts hitting max attempts", color: "text-red-600" },
+        {
+          label: "Connect Rate",
+          value: `${baseline.connect_rate?.toFixed(2) ?? 0}%`,
+          sub: `${baseline.connected_calls ?? 0} / ${baseline.total_calls ?? 0} calls`,
+          color: "text-blue-600",
+        },
+        {
+          label: "Answer Event %",
+          value: `${baseline.answer_event_pct?.toFixed(2) ?? 0}%`,
+          sub: "Approximated visibility",
+          color: "text-blue-400",
+        },
+        {
+          label: "Avg Attempts Lost-Race",
+          value: `${baseline.avg_attempts_lost_race?.toFixed(2) ?? 0}`,
+          sub: "Per contact",
+          color: "text-yellow-500",
+        },
+        {
+          label: "Cooldown / Day",
+          value: `${baseline.cooldown_per_day ?? 0}`,
+          sub: "Contacts hitting max attempts",
+          color: "text-red-600",
+        },
       ],
     },
     {
       title: "Pilot Metrics (NAICS Powerlist)",
       metrics: [
-        { label: "Sample Size", value: "0", sub: "Unique contacts", color: "text-green-600" },
-        { label: "Target Connect Rate", value: "0%", sub: "+0% vs baseline", color: "text-blue-600" },
-        { label: "Success Criteria", value: "0%", sub: "Min connect rate uplift", color: "text-blue-400" },
-        { label: "Test Duration", value: "0", sub: "Business days", color: "text-yellow-500" },
+        {
+          label: "Sample Size",
+          value: `${pilot.sample_size ?? 0}`,
+          sub: "Unique contacts",
+          color: "text-green-600",
+        },
+        {
+          label: "Target Connect Rate",
+          value: `${pilot.target_connect_rate?.toFixed(2) ?? 0}%`,
+          sub: `+${pilot.target_connect_uplift_pct ?? 0}% vs baseline`,
+          color: "text-blue-600",
+        },
+        {
+          label: "Success Criteria",
+          value: `${pilot.success_connect_uplift_pct ?? 0}%`,
+          sub: "Min connect rate uplift",
+          color: "text-blue-400",
+        },
+        {
+          label: "Test Duration",
+          value: `${pilot.test_duration_days ?? 0}`,
+          sub: "Business days",
+          color: "text-yellow-500",
+        },
       ],
     },
     {
       title: "Data Hygiene",
       metrics: [
-        { label: "Total Validated", value: "0", sub: "Phone numbers", color: "text-blue-600" },
-        { label: "Reachable", value: "0", sub: "0.0% of total", color: "text-green-600" },
-        { label: "Invalid", value: "0", sub: "0% of total", color: "text-red-600" },
-        { label: "Validated & Dialed", value: "0", sub: "0% of validated", color: "text-blue-400" },
+        {
+          label: "Total Validated",
+          value: `${validation.total_validated ?? 0}`,
+          sub: "Phone numbers",
+          color: "text-blue-600",
+        },
+        {
+          label: "Reachable",
+          value: `${validation.reachable_count ?? 0}`,
+          sub: `${validation.reachable_rate?.toFixed(1) ?? 0}% of total`,
+          color: "text-green-600",
+        },
+        {
+          label: "Invalid",
+          value: `${validation.invalid_count ?? 0}`,
+          sub: `${validation.invalid_pct ?? 0}% of total`,
+          color: "text-red-600",
+        },
+        {
+          label: "Validated & Dialed",
+          value: `${validation.validated_dialed_count ?? 0}`,
+          sub: `${validation.validated_dialed_pct ?? 0}% of validated`,
+          color: "text-blue-400",
+        },
       ],
     },
     {
       title: "Reattempt / Cooldown",
       metrics: [
-        { label: "Cooldown Contacts", value: "0", sub: "At max attempts", color: "text-yellow-500" },
-        { label: "Reattempt Potential", value: "0", sub: "Expected successful recontacts", color: "text-green-600" },
-        { label: "Target KPI", value: "0%", sub: "Success rate target", color: "text-blue-600" },
+        {
+          label: "Cooldown Contacts",
+          value: `${cooldown.cooldown_contacts_count ?? 0}`,
+          sub: "At max attempts",
+          color: "text-yellow-500",
+        },
+        {
+          label: "Reattempt Potential",
+          value: `${cooldown.reattempt_potential ?? 0}`,
+          sub: "Expected successful recontacts",
+          color: "text-green-600",
+        },
+        {
+          label: "Target KPI",
+          value: `${cooldown.target_kpi ?? 0}%`,
+          sub: "Success rate target",
+          color: "text-blue-600",
+        },
       ],
     },
   ];
-
-export default function DashboardPage() {
-
-  const [data, setData] = useState<any>(null);
-
-  const fetchMetrics = async () => {
-    const res = await fetch("/api/dashboard");
-    const records = await res.json();
-    setData(records)
-    console.log(records)
-  }
-
-  useEffect(() => {
-    fetchMetrics()
-  }, []);
-
-  if (!data) return <p>Loading metrics...</p>;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -70,7 +157,7 @@ export default function DashboardPage() {
         </h1>
 
         <p className="text-gray-500 mb-2 text-sm float-right">
-          Data source: {data.source} | Last updated:{" "}
+          Data source: {data.cached ? "Supabase Cache" : "Recomputed"} | Last updated:{" "}
           {new Date(data.last_updated).toLocaleString()}
         </p>
 
@@ -89,7 +176,9 @@ export default function DashboardPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className={`text-3xl font-bold ${m.color}`}>{m.value}</div>
+                      <div className={`text-3xl font-bold ${m.color}`}>
+                        {m.value}
+                      </div>
                       <p className="text-sm text-gray-500">{m.sub}</p>
                     </CardContent>
                   </Card>
@@ -98,11 +187,20 @@ export default function DashboardPage() {
             </section>
           ))}
         </div>
-        <br /><br />
-        <div className="card-body mt-5 bg-blue-500 text-white px-4 py-3" role="alert">
-          <h4>📋 Phone ID Live Status Logging Plan</h4>
-          <p>Remember to log "Phone ID Live Status" as a HubSpot property for all contacts. This will help track validation effectiveness and improve future targeting.</p>
+
+        <br />
+        <div
+          className="card-body mt-5 bg-blue-500 text-white px-4 py-3 rounded-md"
+          role="alert"
+        >
+          <h4 className="font-semibold">📋 Phone ID Live Status Logging Plan</h4>
+          <p>
+            Remember to log "Phone ID Live Status" as a HubSpot property for all
+            contacts. This will help track validation effectiveness and improve
+            future targeting.
+          </p>
         </div>
+
         <Footer />
       </div>
     </main>
