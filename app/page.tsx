@@ -113,7 +113,7 @@ export default function DashboardPage() {
           color: "text-green-600",
         },
         {
-          label: "Invalid",
+          label: "Without Phone ID Live",
           value: `${validation.invalid_count ?? 0}`,
           sub: `${validation.invalid_pct ?? 0}% of total`,
           color: "text-red-600",
