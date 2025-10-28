@@ -20,6 +20,8 @@ export function filterByDateRange<T extends Record<string, any>>(
 
   const now = dayjs().tz("Asia/Manila");
 
+  console.log("Filtering by date:", now)
+
   const startOfDay = now.startOf("day");
   const startOfWeek = now.startOf("week");
   const startOfMonth = now.startOf("month");
