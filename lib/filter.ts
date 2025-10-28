@@ -32,7 +32,7 @@ export function filterByDateRange<T extends Record<string, any>>(
     let date: dayjs.Dayjs | null = null;
 
     for (const fmt of formats) {
-      const parsed = dayjs.tz(rawDate, fmt, TZ);
+      const parsed = dayjs(rawDate, fmt).tz(TZ);
       if (parsed.isValid()) {
         date = parsed;
         break;
