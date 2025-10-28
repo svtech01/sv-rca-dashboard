@@ -15,7 +15,7 @@ const FORMATS = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY"];
 export function filterByDateRange<T extends Record<string, any>>(
   data: T[],
   filter: "all" | "today" | "week" | "month" = "all",
-  dateKey: keyof T = "datetime" as keyof T
+  dateKey: keyof T = "date" as keyof T
 ): T[] {
   if (!data?.length || filter === "all") return data;
 
