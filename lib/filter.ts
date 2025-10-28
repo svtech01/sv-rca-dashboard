@@ -10,10 +10,9 @@ dayjs.extend(customParseFormat);
 dayjs.extend(isBetween);
 
 const TZ = "Asia/Manila";
-
 dayjs.tz.setDefault(TZ);
 
-const FORMATS = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY"];
+const FORMATS = ["M/D/YYYY", "M/D/YY", "MM/DD/YYYY", "MM/DD/YY", "YYYY-MM-DD"];
 
 export function filterByDateRange<T extends Record<string, any>>(
   data: T[],
@@ -25,36 +24,42 @@ export function filterByDateRange<T extends Record<string, any>>(
   const now = dayjs().tz(TZ);
   let start: dayjs.Dayjs;
 
-  if (filter === "today") start = now.startOf("day");
-  else if (filter === "week") start = now.subtract(7, "day").startOf("day");
-  else start = now.subtract(30, "day").startOf("day");
+  if (filter === "today") {
+    start = now.startOf("day");
+  } else if (filter === "week") {
+    start = now.subtract(6, "day").startOf("day"); // ✅ 7 days including today
+  } else {
+    start = now.subtract(29, "day").startOf("day");
+  }
 
   const end = now.endOf("day");
 
-  console.log(`📂Filtering from ${start.toDate()} to ${end.toDate()}`);
+  console.log(`📂 Filtering from ${start.format()} to ${end.format()} (${TZ})`);
 
   return data.filter((row) => {
     const raw = row[dateKey];
-    if (!raw) return false;
+    if (!raw || typeof raw !== "string") return false;
 
     let parsed: dayjs.Dayjs | null = null;
 
-    // Only try minimal known formats (fastest path)
-    for (let i = 0; i < FORMATS.length; i++) {
-      parsed = dayjs(raw, FORMATS[i]).tz(TZ);
-      if (parsed.isValid()) break;
+    for (const fmt of FORMATS) {
+      try {
+        const attempt = dayjs.tz(raw, fmt, TZ);
+        if (attempt.isValid()) {
+          parsed = attempt;
+          break;
+        }
+      } catch {
+        continue; // skip invalid format attempts safely
+      }
     }
 
-    if (!parsed || !parsed.isValid()) return false;
-
-    // Convert once to Manila timezone
-    parsed = parsed.tz(TZ);
-
-    if(filter === "today") {
-      return parsed.isSame(start);
-    }else{
-      return parsed.isAfter(start) && parsed.isBefore(end);
+    if (!parsed || !parsed.isValid()) {
+      // fallback: try generic parse (fastest safe option)
+      parsed = dayjs(raw).tz(TZ);
+      if (!parsed.isValid()) return false;
     }
 
+    return parsed.isBetween(start, end, null, "[]");
   });
 }
