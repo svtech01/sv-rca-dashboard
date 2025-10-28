@@ -8,16 +8,20 @@ import { Spinner } from "@/components/ui/spinner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSection from "@/components/LoadingSection";
+import DateRangeFilter from "@/components/DateFilter";
 
 export default function DashboardPage() {
-  const [data, setData] = useState<any>(null);
 
-  const fetchMetrics = async () => {
+  const [data, setData] = useState<any>(null);
+  const [filterBy, setFilterBy] = useState("all");
+
+  const fetchMetrics = async (newFilter: string) => {
     try {
+      setData(null)
       console.log("Loading..")
-      const res = await fetch("/api/dashboard");
+      console.log("Filters:", newFilter)
+       const res = await fetch(`/api/dashboard?filter=${newFilter}`);
       const records = await res.json();
-      console.log(records);
       setData(records);
       console.log("📊 Dashboard data loaded:", records);
     } catch (err) {
@@ -25,9 +29,17 @@ export default function DashboardPage() {
     }
   };
 
+  const handleOnChangeFilter = async (filter: any) => {
+    setFilterBy(filter)
+  }
+
+  // useEffect(() => {
+  //   fetchMetrics(filterBy);
+  // }, []);
+
   useEffect(() => {
-    fetchMetrics();
-  }, []);
+    fetchMetrics(filterBy); // Triggered by filtering, fetch metrics
+  }, [filterBy]);
 
   if (!data) return <LoadingSection />;
 
@@ -152,19 +164,24 @@ export default function DashboardPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main className="min-h-screenx bg-gray-50">
       <Header />
       <div className="max-w-6xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-bold mb-8 text-gray-800">
           Kixie Powerlist RCA Dashboard
         </h1>
 
-        <p className="text-gray-500 mb-2 text-sm float-right">
-          Data source: {data.cached ? "Supabase Cache" : "Recomputed"} | Last updated:{" "}
-          {new Date(data.last_updated).toLocaleString()}
-        </p>
+        <div className="mb-8 align-items-end">
+          <span className="text-gray-500 mb-2 text-sm">
+              Data source: {data.cached ? "Supabase Cache" : "Recomputed"} | Last updated:{" "}
+              {new Date(data.last_updated).toLocaleString()}          
+            </span>
+          <div className="float-right">
+            <DateRangeFilter value={filterBy} onRangeChange={handleOnChangeFilter} />            
+          </div>
+        </div>
 
-        <div className="space-y-10">
+        <div className="space-y-10 mt-8">
           {sections.map((section) => (
             <section key={section.title}>
               <h2 className="text-xl font-semibold mb-4 text-gray-700">

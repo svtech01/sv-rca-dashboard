@@ -37,7 +37,7 @@ async function loadCSVDatax() {
 }
 
 // --- Main API route ---
-export async function GET() {
+export async function GET(req: Request) {
   try {
     // 1️⃣ Try to load cached metrics
     const { data: cachedRows } = await supabase
@@ -61,9 +61,18 @@ export async function GET() {
       }
     }
 
+    // Get filtering params
+    const { searchParams } = new URL(req.url);
+    const filter = (searchParams.get("filter") || "") as
+    | ""
+    | "all"
+    | "today"
+    | "week"
+    | "month";
+
     // 2️⃣ Load CSVs and compute metrics
     console.log("♻️ Cache expired, recomputing dashboard metrics...");
-    const data = await loadCSVData();
+    const data = await loadCSVData(filter);
 
     const metricCalc = new MetricsCalculator(data);
     const validationMerger = new ValidationMerger(data);

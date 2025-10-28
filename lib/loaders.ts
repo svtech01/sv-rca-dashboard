@@ -2,6 +2,7 @@ import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
 import { supabase } from "./supabaseServerClient";
+import { filterByDateRange } from "./filter";
 
 export type CSVData = Record<string, any>[];
 export type FileMap = {
@@ -91,6 +92,7 @@ export async function loadPowerlist(url: string): Promise<CSVData> {
     attemptCount: Number(r["Attempt Count"] || r["attempts"] || 0),
     "List Name": r["List Name"] || r["list_name"] || "Default List",
     phoneNormalized: normalizePhonesLast10(r["Phone Number"] || r["phone"]),
+    date: r["Date Added"] || ''
   }));
 }
 
@@ -119,7 +121,7 @@ function loadPowerlistFromText(csvText: string): CSVRow[] {
   return data;
 }
 
-export async function loadCSVData() {
+export async function loadCSVData(filter: "all" | "today" | "week" | "month" | "") {
   // Try Supabase first, unless forced to local mode
   const USE_LOCAL = process.env.FORCE_LOCAL === "true"
 
@@ -195,6 +197,25 @@ export async function loadCSVData() {
     if (powerlistLocal){
       console.log("📂 Parsing local Powerlist CSV...");
       powerlist = loadPowerlistFromText(powerlistLocal);
+    }
+  }
+
+  // Apply Filters
+  if(filter != ""){
+    console.log("📂 Applying filters", filter);
+    const filteredKixie = filterByDateRange(kixie, filter, "date");
+    const filteredPowerlist = filterByDateRange(powerlist, filter, "date");
+    console.log("Before filtering: Kixie List", kixie.length);
+    console.log("After filtering: Kixie List", filteredKixie.length);
+    // console.log("Sample Kixie:", kixie.slice(0, 5).map(d => d.datetime || d.date || d["Call Date"]));
+
+    console.log("Before filtering: Powerlist", powerlist.length);
+    console.log("After filtering: Powerlist", filteredPowerlist.length);
+    // console.log("Sample Powerlist:", powerlist.slice(0, 5).map(d => d.datetime || d.date || d["Call Date"]));
+    return {
+      telesign,
+      kixie: filteredKixie,
+      powerlist: filteredPowerlist
     }
   }
 
