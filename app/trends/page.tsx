@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import {
   LineChart,
   Line,
@@ -16,26 +17,81 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export default function TrendsPage() {
+// // Example dummy data — replace this later with backend data
+// const weeklyTrends = {
+//   weeks: ["Week 1", "Week 2", "Week 3", "Week 4"],
+//   total_calls: [100, 150, 200, 180],
+//   connected_calls: [40, 70, 90, 80],
+//   voicemail_calls: [30, 40, 60, 50],
+//   no_answer_calls: [30, 40, 50, 50],
+// };
 
-  // Example dummy data — replace this later with backend data
-  const weeklyTrends = {
-    weeks: ["Week 1", "Week 2", "Week 3", "Week 4"],
-    total_calls: [100, 150, 200, 180],
-    connected_calls: [40, 70, 90, 80],
-    voicemail_calls: [30, 40, 60, 50],
-    no_answer_calls: [30, 40, 50, 50],
-  };
+// const lineData = weeklyTrends.weeks.map((week, i) => ({
+//   week,
+//   total_calls: weeklyTrends.total_calls[i],
+//   connected_calls: weeklyTrends.connected_calls[i],
+//   voicemail_calls: weeklyTrends.voicemail_calls[i],
+//   no_answer_calls: weeklyTrends.no_answer_calls[i],
+// }));
 
-  const lineData = weeklyTrends.weeks.map((week, i) => ({
+// const barData = lineData; // same source for simplicity
+
+function parseTrendsData(data: any){
+  
+  if(!data?.weeks) return {
+    callVolume: [],
+    disposition: []
+  }
+
+  const callVolume = data.weeks.map((week: string, i: number) => ({
     week,
-    total_calls: weeklyTrends.total_calls[i],
-    connected_calls: weeklyTrends.connected_calls[i],
-    voicemail_calls: weeklyTrends.voicemail_calls[i],
-    no_answer_calls: weeklyTrends.no_answer_calls[i],
+    total_calls: data.total_calls[i],
+    connected_calls: data.connected_calls[i],
+    voicemail_calls: data.voicemail_calls[i],
+    no_answer_calls: data.no_answer_calls[i],
   }));
 
-  const barData = lineData; // same source for simplicity
+  const disposition = data.weeks.map((week: string, i: number) => ({
+    week,
+    connected_calls: data.connected_calls[i],
+    voicemail_calls: data.voicemail_calls[i],
+    no_answer_calls: data.no_answer_calls[i],
+  }));
+
+  return {
+    callVolume,
+    disposition
+  }
+}
+
+export default function TrendsPage() {
+
+  const [callVolumes, setCallVolumes] = useState<any>([]);
+  const [dispositions, setDispositions] = useState<any>([]);
+  
+  const fetchMetrics = async (newFilter: string) => {
+    try {
+
+      console.log("Loading..")
+      console.log("Filters:", newFilter)
+      const res = await fetch(`/api/trends?filter=${newFilter}`);
+      const records = await res.json();
+      
+      if(records?.trends){
+        const parsedMetrics = parseTrendsData(records?.trends)
+        setCallVolumes(parsedMetrics?.callVolume)
+        setDispositions(parsedMetrics.disposition)
+      }
+
+      console.log("📊 Trends data loaded:", records);
+    } catch (err) {
+      console.error("❌ Failed to load dashboard:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMetrics("all")
+  }, []);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -56,7 +112,7 @@ export default function TrendsPage() {
           <CardContent>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineData}>
+                <LineChart data={callVolumes}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
                   <YAxis />
@@ -104,7 +160,7 @@ export default function TrendsPage() {
           <CardContent>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData}>
+                <BarChart data={dispositions}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
                   <YAxis />

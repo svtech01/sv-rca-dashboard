@@ -81,7 +81,7 @@ export default function DashboardPage() {
       ],
     },
     {
-      title: "Pilot Metrics (NAICS Powerlist)",
+      title: "Powerlist",
       metrics: [
         {
           label: "Sample Size",
@@ -108,6 +108,10 @@ export default function DashboardPage() {
           color: "text-yellow-500",
         },
       ],
+      filter: [
+        "NAICS",
+        "Construction"
+      ]
     },
     {
       title: "Data Hygiene",

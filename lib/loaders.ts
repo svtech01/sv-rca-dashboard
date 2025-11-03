@@ -1,7 +1,10 @@
 import Papa from "papaparse";
 import fs from "fs";
 import path from "path";
+import dayjs from "dayjs";
+
 import { supabase } from "./supabaseServerClient";
+
 import { filterByDateRange } from "./filter";
 
 export type CSVData = Record<string, any>[];
@@ -38,6 +41,9 @@ export async function parseCSV(fileUrl: string): Promise<CSVData> {
 export async function loadKixie(url: string): Promise<CSVData> {
   const rows = await parseCSV(url);
   return rows.map((r) => ({
+    datetime: ("Date" in r && "Time" in r) ? (dayjs(`${r.Date} ${r.Time}`).isValid() ? dayjs(`${r.Date} ${r.Time}`).toDate() : null)
+             : ("Date" in r) ? (dayjs(r.Date).isValid() ? dayjs(r.Date).toDate() : null)
+             : null,
     date: r["Date"] || r["call_date"] || r["Call Date"],
     time: r["Time"] || r["call_time"] || "",
     agentFirstName: r["Agent First Name"] || r["first_name"] || "",

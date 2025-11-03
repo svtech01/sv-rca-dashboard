@@ -11,6 +11,84 @@ const FILE_MAP: Record<string, string> = {
 
 export const runtime = "nodejs"; // ensure full file system + buffer support
 
+// ✅ Required columns per file type
+const requiredColumns: Record<string, string[]> = {
+  kixie: ["Disposition", "To Number"],
+  telesign_with: ["phone_e164"],
+  telesign_without: ["phone_e164"],
+  powerlist: ["Phone Number", "Connected", "Attempt Count"],
+};
+
+// ✅ Flexible mappings for column name variations
+const columnMappings: Record<string, Record<string, string[]>> = {
+  kixie: {
+    Disposition: [
+      "Disposition",
+      "disposition",
+      "Outcome",
+      "outcome",
+      "Call Outcome",
+      "call_outcome",
+    ],
+    "To Number": [
+      "To Number",
+      "to_number",
+      "To",
+      "to",
+      "Phone",
+      "phone",
+      "Phone Number",
+      "phone_number",
+      "Number",
+      "number",
+    ],
+  },
+  telesign_with: {
+    phone_e164: [
+      "phone_e164",
+      "contact_mobile_phone",
+      "phone",
+      "mobile_phone",
+      "Contact Mobile Phone",
+    ],
+  },
+  telesign_without: {
+    phone_e164: [
+      "phone_e164",
+      "contact_mobile_phone",
+      "phone",
+      "mobile_phone",
+      "Contact Mobile Phone",
+    ],
+  },
+  powerlist: {
+    "Phone Number": [
+      "Phone Number",
+      "phone_number",
+      "Phone",
+      "phone",
+      "PhoneNumber",
+    ],
+    Connected: ["Connected", "connected", "Is Connected", "is_connected"],
+    "Attempt Count": [
+      "Attempt Count",
+      "attempt_count",
+      "Attempts",
+      "attempts",
+      "Attempts Count",
+    ],
+    "List Name": [
+      "List Name",
+      "list_name",
+      "List",
+      "list",
+      "ListName",
+      "Powerlist Name",
+      "powerlist_name",
+    ],
+  },
+};
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -51,85 +129,6 @@ export async function POST(req: Request) {
     }
 
     const columns = Object.keys(df[0]);
-
-    // ✅ Required columns per file type
-    const requiredColumns: Record<string, string[]> = {
-      kixie: ["Disposition", "To Number"],
-      telesign_with: ["phone_e164"],
-      telesign_without: ["phone_e164"],
-      powerlist: ["Phone Number", "Connected", "Attempt Count"],
-    };
-
-    // ✅ Flexible mappings for column name variations
-    const columnMappings: Record<string, Record<string, string[]>> = {
-      kixie: {
-        Disposition: [
-          "Disposition",
-          "disposition",
-          "Outcome",
-          "outcome",
-          "Call Outcome",
-          "call_outcome",
-        ],
-        "To Number": [
-          "To Number",
-          "to_number",
-          "To",
-          "to",
-          "Phone",
-          "phone",
-          "Phone Number",
-          "phone_number",
-          "Number",
-          "number",
-        ],
-      },
-      telesign_with: {
-        phone_e164: [
-          "phone_e164",
-          "contact_mobile_phone",
-          "phone",
-          "mobile_phone",
-          "Contact Mobile Phone",
-        ],
-      },
-      telesign_without: {
-        phone_e164: [
-          "phone_e164",
-          "contact_mobile_phone",
-          "phone",
-          "mobile_phone",
-          "Contact Mobile Phone",
-        ],
-      },
-      powerlist: {
-        "Phone Number": [
-          "Phone Number",
-          "phone_number",
-          "Phone",
-          "phone",
-          "PhoneNumber",
-        ],
-        Connected: ["Connected", "connected", "Is Connected", "is_connected"],
-        "Attempt Count": [
-          "Attempt Count",
-          "attempt_count",
-          "Attempts",
-          "attempts",
-          "Attempts Count",
-        ],
-        "List Name": [
-          "List Name",
-          "list_name",
-          "List",
-          "list",
-          "ListName",
-          "Powerlist Name",
-          "powerlist_name",
-        ],
-      },
-    };
-
     const required = requiredColumns[fileType] || [];
     const mappings = columnMappings[fileType] || {};
     const missingColumns: string[] = [];
@@ -157,7 +156,7 @@ export async function POST(req: Request) {
     }
 
     // ✅ Save to Supabase Storage
-    const bucket = "data-files";
+    const bucket = process.env.SUPABASE_BUCKET || "test-data-files";
     const filePath = fileType;
     const _fileType = (formData.get("file_type") as string);
 
@@ -175,6 +174,7 @@ export async function POST(req: Request) {
       });
 
     if (uploadError) {
+      console.error("Upload error:", uploadError);
       throw uploadError;
     }
 
