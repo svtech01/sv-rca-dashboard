@@ -1,17 +1,15 @@
-"use client";
-
-import Header from "@/components/Header";
+import Papa from "papaparse";
+import { useState, useEffect } from "react";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import Footer from "@/components/Footer";
 
-import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { normalizeCSV } from "@/lib/normalizer";
 
 interface FileStatus {
   name: string;
@@ -34,6 +32,7 @@ export default function UploadForm({
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
+
     if (!file || !fileType) {
       setMessage("Please select both a file and file type.");
       return;
@@ -41,29 +40,72 @@ export default function UploadForm({
 
     setUploading(true);
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("file_type", fileType);
+    // const formData = new FormData();
+    // formData.append("file", file);
+    // formData.append("file_type", fileType);
+    // formData.append("upload_file_name", file.name);
 
+    const text = await file.text();
+    const normalizedCsv = normalizeCSV(text, fileType);
+    
+    if (!normalizedCsv.success || !normalizedCsv.data) {
+      console.log("CSV File Normalizer error: ", normalizedCsv.error)
+      toast.error("Unable to normalize csv file.", {
+        style: {
+          backgroundColor: '#d4edda',
+          color: '#bf4c16ff',
+          borderColor: '#c3e6cb'        
+        }
+      });
+      return
+    }
+
+    const csvText = Papa.unparse(normalizedCsv.data);
+
+    // 2️⃣ Request signed upload URL
     const res = await fetch("/api/upload", {
       method: "POST",
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileType, upload_file_name: file.name }),
     });
 
-    const data = await res.json();
-    console.log(data)
-    if (res.ok) {
-      toast.success(data.message, {
+    const { signedUrl } = await res.json();
+
+    if (!signedUrl) throw new Error("Failed to get signed URL");
+
+    console.log("Signed URL: ", signedUrl);
+
+    // 3️⃣ Upload directly to Supabase
+    const blob = new Blob([csvText], { type: "text/csv" });
+    const uploadRes = await fetch(signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": "text/csv" },
+      body: blob,
+    });
+
+    if(uploadRes.ok) {
+      
+      console.log("✅ Uploaded large CSV directly to Supabase!");
+      toast.success("File uploaded successfully!", {
         style: {
           backgroundColor: '#d4edda',
           color: '#155724',
           borderColor: '#c3e6cb'        
         }
-      })      
-      if(onUploadSuccess) onUploadSuccess(data)
-    } else {
-      setMessage(`❌ Upload failed: ${data.error}`);
+      });
+
+      if(onUploadSuccess) onUploadSuccess(uploadRes)
+
+    }else{
+      toast.error("Unable to upload CSV file. Try again later", {
+        style: {
+          backgroundColor: '#d4edda',
+          color: '#bf4c16ff',
+          borderColor: '#c3e6cb'        
+        }
+      });
     }
+
     setUploading(false)
   }
 

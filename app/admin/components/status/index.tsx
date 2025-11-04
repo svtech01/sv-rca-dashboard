@@ -10,6 +10,7 @@ interface FileStatus {
   status: string;
   className: string;
   updatedAt: string | null;
+  fileCount: number;
   sizeKB: string | null;
 }
 
@@ -50,10 +51,14 @@ const FileStatuses = forwardRef(({}, ref) => {
           </>
         ) : (
           csvFiles.map((file, index) => (
-            <p key={index} className="mb-5 text-md">{file.name} - <span className={`float-right text-xs badge badge-sm text-sm text-white rounded p-1 ${file.className}`}>
-              {file.status}
-            </span>
-            </p>
+              <div key={index} className="mb-5 text-md">
+                <p>{file.name}
+                  <span className={`float-right text-xs badge badge-sm text-sm text-white rounded p-1 ${file.className}`}>
+                    {file.status}
+                  </span>
+                </p>
+                <i className="text-xs">{file.fileCount} files loaded</i>
+              </div>
           ))
         )}
       </CardContent>

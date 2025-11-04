@@ -1,42 +1,60 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseServerClient";
 
-const FILE_MAP = {
-  "Kixie Call History": "kixie_call_history.csv",
-  "Telesign (With Live)": "telesign_with_live.csv",
-  "Telesign (Without Live)": "telesign_without_live.csv",
-  "Powerlist Contacts": "powerlist_contacts.csv",
+const FOLDERS = {
+  "Kixie Call History": "kixie_call_history",
+  "Telesign (With Live)": "telesign_with_live",
+  "Telesign (Without Live)": "telesign_without_live",
+  "Powerlist Contacts": "powerlist_contacts",
 };
 
 export async function GET() {
   try {
-    const bucket = "data-files";
+    const bucket = process.env.SUPABASE_BUCKET || "test-data-files";
 
-    // Get list of files from Supabase Storage
-    const { data, error } = await supabase.storage.from(bucket).list("", {
-      limit: 10,
-    });
+    const folderStatuses = await Promise.all(
+      Object.entries(FOLDERS).map(async ([label, folder]) => {
+        const { data: files, error } = await supabase.storage.from(bucket).list(folder);
 
-    if (error) {
-      console.error("Error listing files:", error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+        if (error) {
+          console.error(`Error listing folder '${folder}':`, error.message);
+          return {
+            name: label,
+            status: "Error",
+            className: "bg-yellow-600",
+            updatedAt: null,
+            fileCount: 0,
+          };
+        }
 
-    // Build file status mapping
-    const fileStatuses = Object.entries(FILE_MAP).map(([label, filename]) => {
-      const found = data?.find((f) => f.name === filename);
-      return {
-        name: label,
-        status: found ? "Loaded" : "Missing",
-        className: found ? "bg-green-600" : "bg-red-600",
-        updatedAt: found?.updated_at || null,
-        sizeKB: found ? (found.metadata?.size / 1024).toFixed(1) : null,
-      };
-    });
+        if (!files || files.length === 0) {
+          return {
+            name: label,
+            status: "Missing",
+            className: "bg-red-600",
+            updatedAt: null,
+            fileCount: 0,
+          };
+        }
 
-    return NextResponse.json({ files: fileStatuses });
+        // Find the most recently updated file
+        const latestFile = files.reduce((a, b) =>
+          (a.updated_at || "") > (b.updated_at || "") ? a : b
+        );
+
+        return {
+          name: label,
+          status: "Loaded",
+          className: "bg-green-600",
+          updatedAt: latestFile.updated_at || null,
+          fileCount: files.length,
+        };
+      })
+    );
+
+    return NextResponse.json({ files: folderStatuses });
   } catch (error: any) {
-    console.error("Unexpected error listing files:", error);
+    console.error("Unexpected error listing folders:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

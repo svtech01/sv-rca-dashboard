@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import { supabase } from "./supabaseServerClient";
 
 import { filterByDateRange } from "./filter";
+import { normalizePhonesLast10 } from "./normalizer";
 
 export type CSVData = Record<string, any>[];
 export type FileMap = {
@@ -14,13 +15,6 @@ export type FileMap = {
   telesignWithout?: string;
   powerlist?: string;
 };
-
-/** Normalize phone numbers → last 10 digits */
-export function normalizePhonesLast10(phone: string | number | null): string | null {
-  if (!phone) return null;
-  const digits = String(phone).replace(/\D/g, "");
-  return digits.length >= 10 ? digits.slice(-10) : digits;
-}
 
 /** Generic CSV parser */
 export async function parseCSV(fileUrl: string): Promise<CSVData> {
@@ -38,8 +32,8 @@ export async function parseCSV(fileUrl: string): Promise<CSVData> {
 }
 
 /** Load & normalize Kixie CSV */
-export async function loadKixie(url: string): Promise<CSVData> {
-  const rows = await parseCSV(url);
+export async function loadKixie(rows: CSVData): Promise<CSVData> {
+  // const rows = await parseCSV(url);
   return rows.map((r) => ({
     datetime: ("Date" in r && "Time" in r) ? (dayjs(`${r.Date} ${r.Time}`).isValid() ? dayjs(`${r.Date} ${r.Time}`).toDate() : null)
              : ("Date" in r) ? (dayjs(r.Date).isValid() ? dayjs(r.Date).toDate() : null)
@@ -61,23 +55,24 @@ export async function loadKixie(url: string): Promise<CSVData> {
 }
 
 /** Load & merge Telesign CSVs */
-export async function loadTelesign(withUrl?: string, withoutUrl?: string): Promise<CSVData> {
-  const urls = [withUrl, withoutUrl].filter(Boolean) as string[];
+export async function loadTelesign(withRows?: CSVData, withoutRows?: CSVData): Promise<CSVData> {
+  const items = [withRows, withoutRows].filter(Boolean) as CSVData[];
   const allRows: CSVData = [];
 
-  for (const url of urls) {
-    const rows = await parseCSV(url);
-    const normalized = rows.map((r) => ({
+  for (const [index, item] of items.entries()) {
+    // const rows = await parseCSV(url);
+
+    const normalized = item.map((r) => ({
       phoneE164: r["phone_e164"] || r["contact_mobile_phone"] || r["phone"] || "",
       is_reachable:
         r["is_reachable"] ??
         r["reachable"] ??
         r["live"] ??
-        (url.toLowerCase().includes("with_live") ? true : false),
+        (index == 0 ? true : false), // index 0 == with_live, index 1 == without_live
       carrier: r["carrier"] || r["phone_carrier"] || "Unknown",
       riskLevel: r["risk_level"] || r["risk"] || "Unknown",
       validationType: r["validation_type"] || r["validation"] || "Unknown",
-      source_file: url.toLowerCase().includes("with_live") ? "with_live" : "without_live",
+      source_file: index == 0 ? "with_live" : "without_live", // index 0 == with_live, index 1 == without_live
       phoneNormalized: normalizePhonesLast10(
         r["phone_e164"] || r["contact_mobile_phone"] || r["phone"]
       ),
@@ -90,8 +85,8 @@ export async function loadTelesign(withUrl?: string, withoutUrl?: string): Promi
 }
 
 /** Load Powerlist CSV */
-export async function loadPowerlist(url: string): Promise<CSVData> {
-  const rows = await parseCSV(url);
+export async function loadPowerlist(rows: CSVData): Promise<CSVData> {
+  // const rows = await parseCSV(url);
   return rows.map((r) => ({
     "Phone Number": r["Phone Number"] || r["phone"] || "",
     Connected: Number(r["Connected"] || r["is_connected"] || 0),
@@ -102,41 +97,17 @@ export async function loadPowerlist(url: string): Promise<CSVData> {
   }));
 }
 
-type CSVRow = Record<string, any>; // generic row type
-
-function loadKixieFromText(csvText: string): CSVRow[] {
-  const { data } = Papa.parse<CSVRow>(csvText, { header: true, skipEmptyLines: true });
-  return data;
-}
-
-function loadTelesignFromText(withLive: string, withoutLive: string): CSVRow[] {
-  const merged: CSVRow[] = [];
-  if (withLive) {
-    const { data } = Papa.parse<CSVRow>(withLive, { header: true, skipEmptyLines: true });
-    merged.push(...data.map((d: any) => ({ ...d, source: "with_live" })));
-  }
-  if (withoutLive) {
-    const { data } = Papa.parse<CSVRow>(withoutLive, { header: true, skipEmptyLines: true });
-    merged.push(...data.map((d: any) => ({ ...d, source: "without_live" })));
-  }
-  return merged;
-}
-
-function loadPowerlistFromText(csvText: string): CSVRow[] {
-  const { data } = Papa.parse<CSVRow>(csvText, { header: true, skipEmptyLines: true });
-  return data;
-}
-
 export async function loadCSVData(filter: "all" | "today" | "week" | "month" | "") {
   // Try Supabase first, unless forced to local mode
   const USE_LOCAL = process.env.FORCE_LOCAL === "true"
+  const bucket = process.env.SUPABASE_BUCKET || 'test-data-files' // for local development, use data-files for prod
 
   let files: any[] | null = null;
   let error: any = null;
 
   if (!USE_LOCAL) {
-    console.log("Getting supabase storage data files...")
-    const res = await supabase.storage.from("data-files").list("");
+    console.log("Getting supabase storage data files...", bucket)
+    const res = await supabase.storage.from(bucket).list("");
     files = res.data;
     error = res.error;
   }
@@ -145,66 +116,40 @@ export async function loadCSVData(filter: "all" | "today" | "week" | "month" | "
     console.warn("⚠️ Supabase Storage unavailable or timed out, switching to local /tmp data...");
   }
 
-  const findUrl = (keyword: string) => {
-    if (!files) return null;
-    const file = files.find((f) => f.name.toLowerCase().includes(keyword.toLowerCase()));
-    if (!file) return null;
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/data-files/${file.name}`;
-  };
+  // const findUrl = (keyword: string, bucket: string) => {
+  //   if (!files) return null;
+  //   const file = files.find((f) => f.name.toLowerCase().includes(keyword.toLowerCase()));
+  //   if (!file) return null;
+  //   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${file.name}`;
+  // };
 
-  const urls = {
-    kixie: !USE_LOCAL ? findUrl("kixie") : null,
-    telesignWith: !USE_LOCAL ? findUrl("with_live") : null,
-    telesignWithout: !USE_LOCAL ? findUrl("without_live") : null,
-    powerlist: !USE_LOCAL ? findUrl("powerlist") : null,
-  };
+  // const urls = {
+  //   kixie: !USE_LOCAL ? findUrl("kixie", bucket) : null,
+  //   telesignWith: !USE_LOCAL ? findUrl("with_live", bucket) : null,
+  //   telesignWithout: !USE_LOCAL ? findUrl("without_live", bucket) : null,
+  //   powerlist: !USE_LOCAL ? findUrl("powerlist", bucket) : null,
+  // };
 
-  // Helper: load CSV text from /tmp
-  const loadLocalCSV = (keyword: string) => {
-    try {
-      const files = fs.readdirSync("/tmp");
-      const match = files.find((f) => f.toLowerCase().includes(keyword.toLowerCase()));
-      if (!match) return null;
-      const fullPath = path.join("/tmp", match);
-      return fs.readFileSync(fullPath, "utf8");
-    } catch (err: any) {
-      console.error(`❌ Local CSV read failed (${keyword}):`, err.message);
-      return null;
-    }
-  };
+  // // 1️⃣ Load from Supabase
+  // let [kixie, telesign, powerlist] = await Promise.all([
+  //   urls.kixie ? loadKixie(urls.kixie) : [],
+  //   loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
+  //   urls.powerlist ? loadPowerlist(urls.powerlist) : [],
+  // ]);
 
-  // 1️⃣ Try to load from Supabase
-  let [kixie, telesign, powerlist] = await Promise.all([
-    urls.kixie ? loadKixie(urls.kixie) : [],
-    loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
-    urls.powerlist ? loadPowerlist(urls.powerlist) : [],
-  ]);
+  // Load + merge all CSVs per folder
+  const _kixie = await mergeCsvFolder("kixie_call_history", bucket);
+  const _telesign_live = await mergeCsvFolder("telesign_with_live", bucket);
+  const _telesign_no_live = await mergeCsvFolder("telesign_without_live", bucket);
+  const _powerlist = await mergeCsvFolder("powerlist_contacts", bucket);
+
+  // Normalize 
+  const kixie = await loadKixie(_kixie);
+  const telesign = await loadTelesign(_telesign_live, _telesign_no_live);
+  const powerlist = await loadPowerlist(_powerlist);
 
   // 2️⃣ Fallback to local /tmp if any of them failed or empty
-  if (!kixie?.length) {
-    const kixieLocal = loadLocalCSV("kixie");
-    if (kixieLocal){
-      console.log("📂 Parsing local Kixie CSV...");
-      kixie = loadKixieFromText(kixieLocal);
-    }
-  }
-
-  if (!telesign?.length) {
-    const withLocal = loadLocalCSV("with_live");
-    const withoutLocal = loadLocalCSV("without_live");
-    if (withLocal && withoutLocal){
-      console.log("📂 Parsing local Telesign CSVs...");
-      telesign = loadTelesignFromText(withLocal ?? undefined, withoutLocal ?? undefined);
-    }      
-  }
-
-  if (!powerlist?.length) {
-    const powerlistLocal = loadLocalCSV("powerlist");
-    if (powerlistLocal){
-      console.log("📂 Parsing local Powerlist CSV...");
-      powerlist = loadPowerlistFromText(powerlistLocal);
-    }
-  }
+  // TODO
 
   // Apply Filters
   if(filter != ""){
@@ -226,4 +171,53 @@ export async function loadCSVData(filter: "all" | "today" | "week" | "month" | "
   }
 
   return { kixie, telesign, powerlist };
+}
+
+/**
+ * Fetch all CSV files from a folder in Supabase and merge their contents
+ * @param folderName - e.g. "kixie_call_history" or "powerlist"
+ * @param bucket - e.g. "test-data-files"
+ * @returns Merged array of parsed CSV rows
+ */
+export async function mergeCsvFolder(folderName: string, bucket = "test-data-files") {
+  // 1️⃣ List all files in the folder
+  const { data: files, error: listError } = await supabase.storage
+    .from(bucket)
+    .list(folderName, { limit: 1000 }); // adjust limit if needed
+
+  if (listError) throw new Error(`Failed to list files: ${listError.message}`);
+  if (!files || files.length === 0) return [];
+
+  let mergedData: any[] = [];
+
+  // 2️⃣ Loop through each file
+  for (const file of files) {
+    if (!file.name.endsWith(".csv")) continue; // skip non-CSV files
+
+    const filePath = `${folderName}/${file.name}`;
+
+    // 3️⃣ Download CSV
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from(bucket)
+      .download(filePath);
+
+    if (downloadError) {
+      console.warn(`Skipping ${filePath} — ${downloadError.message}`);
+      continue;
+    }
+
+    // 4️⃣ Parse CSV text
+    const text = await fileData.text();
+    const parsed = Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+    });
+
+    if (parsed.data && Array.isArray(parsed.data)) {
+      mergedData = mergedData.concat(parsed.data);
+    }
+  }
+
+  // 5️⃣ Return all merged rows
+  return mergedData;
 }
