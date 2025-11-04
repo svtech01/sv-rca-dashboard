@@ -90,56 +90,56 @@ export async function loadCSVData(filter: "all" | "today" | "week" | "month" | "
   };
 
   // 1️⃣ Try to load from Supabase
-  let [kixie, telesign, powerlist] = await Promise.all([
-    urls.kixie ? loadKixie(urls.kixie) : [],
-    loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
-    urls.powerlist ? loadPowerlist(urls.powerlist) : [],
-  ]);
+  // let [kixie, telesign, powerlist] = await Promise.all([
+  //   urls.kixie ? loadKixie(urls.kixie) : [],
+  //   loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
+  //   urls.powerlist ? loadPowerlist(urls.powerlist) : [],
+  // ]);
 
   // 2️⃣ Fallback to local /tmp if any of them failed or empty
-  if (!kixie?.length) {
-    const kixieLocal = loadLocalCSV("kixie");
-    if (kixieLocal){
-      console.log("📂 Parsing local Kixie CSV...");
-      kixie = loadKixieFromText(kixieLocal);
-    }
-  }
+  // if (!kixie?.length) {
+  //   const kixieLocal = loadLocalCSV("kixie");
+  //   if (kixieLocal){
+  //     console.log("📂 Parsing local Kixie CSV...");
+  //     kixie = loadKixieFromText(kixieLocal);
+  //   }
+  // }
 
-  if (!telesign?.length) {
-    const withLocal = loadLocalCSV("with_live");
-    const withoutLocal = loadLocalCSV("without_live");
-    if (withLocal && withoutLocal){
-      console.log("📂 Parsing local Telesign CSVs...");
-      telesign = loadTelesignFromText(withLocal ?? undefined, withoutLocal ?? undefined);
-    }      
-  }
+  // if (!telesign?.length) {
+  //   const withLocal = loadLocalCSV("with_live");
+  //   const withoutLocal = loadLocalCSV("without_live");
+  //   if (withLocal && withoutLocal){
+  //     console.log("📂 Parsing local Telesign CSVs...");
+  //     telesign = loadTelesignFromText(withLocal ?? undefined, withoutLocal ?? undefined);
+  //   }      
+  // }
 
-  if (!powerlist?.length) {
-    const powerlistLocal = loadLocalCSV("powerlist");
-    if (powerlistLocal){
-      console.log("📂 Parsing local Powerlist CSV...");
-      powerlist = loadPowerlistFromText(powerlistLocal);
-    }
-  }
+  // if (!powerlist?.length) {
+  //   const powerlistLocal = loadLocalCSV("powerlist");
+  //   if (powerlistLocal){
+  //     console.log("📂 Parsing local Powerlist CSV...");
+  //     powerlist = loadPowerlistFromText(powerlistLocal);
+  //   }
+  // }
 
-  // Apply Filters
-  if(filter != ""){
-    console.log("📂 Applying filters", filter);
-    const filteredKixie = filterByDateRange(kixie, filter, "date");
-    const filteredPowerlist = filterByDateRange(powerlist, filter, "date");
-    console.log("Before filtering: Kixie List", kixie.length);
-    console.log("After filtering: Kixie List", filteredKixie.length);
-    // console.log("Sample Kixie:", kixie.slice(0, 5).map(d => d.datetime || d.date || d["Call Date"]));
+  // // Apply Filters
+  // if(filter != ""){
+  //   console.log("📂 Applying filters", filter);
+  //   const filteredKixie = filterByDateRange(kixie, filter, "date");
+  //   const filteredPowerlist = filterByDateRange(powerlist, filter, "date");
+  //   console.log("Before filtering: Kixie List", kixie.length);
+  //   console.log("After filtering: Kixie List", filteredKixie.length);
+  //   // console.log("Sample Kixie:", kixie.slice(0, 5).map(d => d.datetime || d.date || d["Call Date"]));
 
-    console.log("Before filtering: Powerlist", powerlist.length);
-    console.log("After filtering: Powerlist", filteredPowerlist.length);
-    // console.log("Sample Powerlist:", powerlist.slice(0, 5).map(d => d.datetime || d.date || d["Call Date"]));
-    return {
-      telesign,
-      kixie: filteredKixie,
-      powerlist: filteredPowerlist
-    }
-  }
+  //   console.log("Before filtering: Powerlist", powerlist.length);
+  //   console.log("After filtering: Powerlist", filteredPowerlist.length);
+  //   // console.log("Sample Powerlist:", powerlist.slice(0, 5).map(d => d.datetime || d.date || d["Call Date"]));
+  //   return {
+  //     telesign,
+  //     kixie: filteredKixie,
+  //     powerlist: filteredPowerlist
+  //   }
+  // }
 
-  return { kixie, telesign, powerlist };
+  // return { kixie, telesign, powerlist };
 }

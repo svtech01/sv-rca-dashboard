@@ -1,4 +1,4 @@
-import { normalizePhonesLast10 } from "../loaders";
+import { normalizePhonesLast10 } from "../normalizer";
 
 export type CSVRecord = Record<string, any>;
 export type CSVData = CSVRecord[];
