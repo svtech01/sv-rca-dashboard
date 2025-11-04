@@ -8,34 +8,6 @@ import { CooldownManager } from "@/lib/metrics/CooldownManager";
 
 const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
 
-// --- Load and parse CSVs ---
-async function loadCSVDatax() {
-  // Fetch file paths from Supabase Storage
-  const { data: files, error } = await supabase.storage.from("data-files").list("");
-  if (error) throw error;
-
-  const findUrl = (keyword: string) => {
-    const file = files?.find((f) => f.name.toLowerCase().includes(keyword.toLowerCase()));
-    if (!file) return null;
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/data-files/${file.name}`;
-  };
-
-  const urls = {
-    kixie: findUrl("kixie"),
-    telesignWith: findUrl("with_live"),
-    telesignWithout: findUrl("without_live"),
-    powerlist: findUrl("powerlist"),
-  };
-
-  const [kixie, telesign, powerlist] = await Promise.all([
-    urls.kixie ? loadKixie(urls.kixie ?? undefined) : [],
-    loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
-    urls.powerlist ? loadPowerlist(urls.powerlist ?? undefined) : [],
-  ]);
-
-  return { kixie, telesign, powerlist };
-}
-
 // --- Main API route ---
 export async function GET(req: Request) {
   try {
