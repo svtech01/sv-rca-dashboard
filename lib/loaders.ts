@@ -116,27 +116,6 @@ export async function loadCSVData(filter: "all" | "today" | "week" | "month" | "
     console.warn("⚠️ Supabase Storage unavailable or timed out, switching to local /tmp data...");
   }
 
-  // const findUrl = (keyword: string, bucket: string) => {
-  //   if (!files) return null;
-  //   const file = files.find((f) => f.name.toLowerCase().includes(keyword.toLowerCase()));
-  //   if (!file) return null;
-  //   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${file.name}`;
-  // };
-
-  // const urls = {
-  //   kixie: !USE_LOCAL ? findUrl("kixie", bucket) : null,
-  //   telesignWith: !USE_LOCAL ? findUrl("with_live", bucket) : null,
-  //   telesignWithout: !USE_LOCAL ? findUrl("without_live", bucket) : null,
-  //   powerlist: !USE_LOCAL ? findUrl("powerlist", bucket) : null,
-  // };
-
-  // // 1️⃣ Load from Supabase
-  // let [kixie, telesign, powerlist] = await Promise.all([
-  //   urls.kixie ? loadKixie(urls.kixie) : [],
-  //   loadTelesign(urls.telesignWith ?? undefined, urls.telesignWithout ?? undefined),
-  //   urls.powerlist ? loadPowerlist(urls.powerlist) : [],
-  // ]);
-
   // Load + merge all CSVs per folder
   const _kixie = await mergeCsvFolder("kixie_call_history", bucket);
   const _telesign_live = await mergeCsvFolder("telesign_with_live", bucket);

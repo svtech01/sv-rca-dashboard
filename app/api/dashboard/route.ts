@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseServerClient";
 
-import { loadKixie, loadTelesign, loadPowerlist, loadCSVData } from "@/lib/loaders";
+import { loadCSVData } from "@/lib/loaders";
 import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
 import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
 import { CooldownManager } from "@/lib/metrics/CooldownManager";

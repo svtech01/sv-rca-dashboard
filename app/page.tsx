@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import LoadingSection from "@/components/LoadingSection";
 import DateRangeFilter from "@/components/DateFilter";
 
@@ -187,17 +188,33 @@ export default function DashboardPage() {
 
         <div className="space-y-10 mt-8">
           {sections.map((section) => (
-            <section key={section.title}>
-              <h2 className="text-xl font-semibold mb-4 text-gray-700">
-                {section.title}
-              </h2>
+            <section key={section.title} className="mb-8">  
+              <div className={section?.filter ? "flex justify-centerx gap-3 mb-5" : "mb-5"}>
+                <h2 className="text-xl font-semibold text-gray-700 mb-0">
+                  {section.title}
+                </h2>
+                {section?.filter && (
+                  <Select>
+                    <SelectTrigger className="mt-1 w-60">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="naics">NAICS</SelectItem>
+                      <SelectItem value="real_estate_construction">
+                        Real Estate & Construction
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {section.metrics.map((m) => (
                   <Card key={m.label} className="shadow-sm">
                     <CardHeader>
                       <CardTitle className="text-base text-gray-600 text-lg">
                         {m.label}
-                      </CardTitle>
+                      </CardTitle>                      
                     </CardHeader>
                     <CardContent>
                       <div className={`text-3xl font-bold ${m.color}`}>
