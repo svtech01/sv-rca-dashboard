@@ -1,16 +1,34 @@
 import { supabase } from "@/lib/supabaseServerClient";
+import { stat } from "fs";
 import { NextResponse } from "next/server";
+
+const WebhookLogger = async (service: string, body: any, status: string, message: string) => {
+  const { error } = await supabase.from("kixie_hook_logs").insert([{
+    service: service,
+    data: body,
+    status: status,
+    message: message,
+  }]);
+  return error;
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
     if (req.headers.get("x-kixie-webhook-secret") !== process.env.KIXIE_WEBHOOK_SECRET) {
+      await WebhookLogger("kixie", body, "error", "Unauthorized");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if(!body || Object.keys(body).length === 0) {
+      await WebhookLogger("kixie", body, "error", "Empty payload");
+      return NextResponse.json({ error: "Empty payload" }, { status: 400 });
     }
 
     const data = body?.data;
     if (!data) {
+      await WebhookLogger("kixie", body, "error", "Missing data object");      
       return NextResponse.json({ error: "Missing data object" }, { status: 400 });
     }
 
@@ -47,12 +65,15 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Supabase upsert error:", error);
+      await WebhookLogger("kixie", body, "error", `Supabase upsert error: ${error.message}`);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    await WebhookLogger("kixie", body, "success", "Call log inserted successfully");
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Webhook error:", err);
+    await WebhookLogger("kixie", err, "error", `try catch error: ${err instanceof Error ? err.message : String(err)}`);
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 }
