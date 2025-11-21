@@ -16,6 +16,7 @@ const parseKixiePayload = (payload: any) => {
   // Implement any additional parsing logic if needed
   const data = payload.callDetails || {};
   const calldate = data.calldate ? new Date(data.calldate) : null;
+  const customerData = data.powerlistContactDetails ? data.powerlistContactDetails?.result : {};
 
   return {
     // datetime breakdown
@@ -24,8 +25,8 @@ const parseKixiePayload = (payload: any) => {
     time: calldate ? calldate.toISOString().split("T")[1].split(".")[0] : null,
 
     // agent info
-    fname: data.fname || null,
-    lname: data.lname || null,
+    fname: customerData.firstName || null,
+    lname: customerData.lastName || null,
     agent_name:
       `${data.fname ?? ""} ${data.lname ?? ""}`.trim() || null,
 
@@ -37,12 +38,8 @@ const parseKixiePayload = (payload: any) => {
     source: data.calltype || null,
     amount: data.amount ? Number(data.amount) : null,
     calltype: data.calltype || null,
-
-    recordingurl: data.recordingurl || null,
-    crmlink: data.crmlink || null,
     
     contactid: data.contactid || null,
-    dealid: data.dealid || null,
     fromnumber: data.fromnumber || null,
     to_number: data.tonumber || null,
     phone_normalized: data.tonumber164 || null, // or normalization fn
@@ -76,6 +73,12 @@ export async function POST(req: Request) {
     }
 
     const record = parseKixiePayload(data);
+
+    if(record?.disposition === "not disposed") {
+      // Skip logging calls that are not disposed
+      await WebhookLogger("kixie", body, "info", "Call not disposed, skipping log");
+      return NextResponse.json({ success: true, message: "Call not disposed, skipping log" });
+    }
 
     const { error } = await supabase.from("kixie_call_logs").insert([record]);
 
