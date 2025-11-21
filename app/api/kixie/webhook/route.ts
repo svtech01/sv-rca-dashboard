@@ -16,7 +16,7 @@ const parseKixiePayload = (payload: any) => {
   // Implement any additional parsing logic if needed
   const data = payload.callDetails || {};
   const calldate = data.calldate ? new Date(data.calldate) : null;
-  const customerData = data.powerlistContactDetails ? data.powerlistContactDetails?.result : {};
+  const customerData = payload.powerlistContactDetails ? payload.powerlistContactDetails?.result : {};
 
   return {
     // datetime breakdown
