@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { normalizeCSV } from "@/lib/normalizer";
+import { toastProvider } from "@/components/ToastService";
+import { uploadFile } from "@/services/FileManagerService";
+import { addToPowerlist } from "@/services/PowerlistService";
 
 interface FileStatus {
   name: string;
@@ -31,6 +34,55 @@ export default function UploadForm({
   const [uploading, setUploading] = useState(false);
 
   async function handleUpload(e: React.FormEvent) {
+    e.preventDefault();
+    setUploading(true);
+    
+    if (!file || !fileType) {
+      setMessage("Please select both a file and file type.");
+      return;
+    }
+
+    const text = await file.text();
+    const normalizedCsv = normalizeCSV(text, fileType);
+    
+    if (!normalizedCsv.success || !normalizedCsv.data) {
+      toastProvider.error("Unable to normalize csv file.")
+      return
+    }
+
+    const csvText = Papa.unparse(normalizedCsv.data);
+
+    const uploadRes = await uploadFile(csvText, fileType, file);
+
+    if(!uploadRes.status){
+      toastProvider.error("Unable to upload CSV file. Try again later");
+      return 
+    }
+
+    console.log("✅ Uploaded large CSV directly to Supabase!");
+
+    if(onUploadSuccess) {
+
+      //save to database
+
+      const record = await addToPowerlist(csvText, fileType);
+      if(record.error){
+        toastProvider.error("Unable to save data to database: " + record.error);
+        return
+      }
+
+      if(record.total == 0){
+        toastProvider.info(`Found 0 new contacts to add to the list.`);
+      }else {
+        toastProvider.success(record.message);
+      }
+
+      setUploading(false);
+      onUploadSuccess({});
+    }
+  }
+
+  async function handleUploadx(e: React.FormEvent) {
     e.preventDefault();
 
     if (!file || !fileType) {
@@ -97,6 +149,7 @@ export default function UploadForm({
       if(onUploadSuccess) onUploadSuccess(uploadRes)
 
     }else{
+      
       toast.error("Unable to upload CSV file. Try again later", {
         style: {
           backgroundColor: '#d4edda',

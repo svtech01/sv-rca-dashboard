@@ -1,15 +1,32 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseServerClient";
+import { supabase, telesignSupabase } from "@/lib/supabaseServerClient";
 
 import { loadCSVData } from "@/lib/loaders";
 import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
 import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
 import { CooldownManager } from "@/lib/metrics/CooldownManager";
+import { getBaselineMetrics, getDataHygieneMetrics } from "@/services/SupabaseMetricsService";
 
 const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
 
-// --- Main API route ---
 export async function GET(req: Request) {
+
+  const baseline = await getBaselineMetrics();
+  const hygiene = await getDataHygieneMetrics();
+
+  // console.log("Baseline Metrics:", baseline);
+  // console.log("Data Hygiene Metrics:", hygiene);
+
+  const metrics = {
+    baseline: baseline,
+    validation: hygiene,
+  }
+
+  return NextResponse.json(metrics, { status: 200 });
+}
+
+// --- Main API route ---
+export async function GETX(req: Request) {
   try {
     // 1️⃣ Try to load cached metrics
     const { data: cachedRows } = await supabase
