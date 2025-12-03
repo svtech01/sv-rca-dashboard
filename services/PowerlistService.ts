@@ -15,6 +15,13 @@ export interface PowerlistContact {
   list_type: string | null;
 }
 
+export function normalizeUploadFilePath(name: string) {
+  return name.toLowerCase()
+      .replace(/\s+/g, "_")        // replace spaces with underscores
+      .replace(/[()]/g, "")        // remove parentheses
+      .replace(/[^a-z0-9_-]/g, ""); // remove any other invalid chars
+}
+
 export function normalizePowerlist(rows: any, type: string) {
 
   // Helper – safely convert "10/21/25" into YYYY-MM-DD

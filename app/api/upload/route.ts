@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseServerClient";
 import { normalizeCSV, FILE_MAP } from "@/lib/normalizer";
+import { normalizeUploadFilePath } from "@/services/PowerlistService";
 
 export const runtime = "nodejs"; // ensure full file system + buffer support
 
@@ -15,12 +16,7 @@ export async function POST(req: Request) {
 
     const bucket = process.env.SUPABASE_BUCKET || "test-data-files";
 
-    // ✅ Folder path — category-based
-    const folderName = fileType
-      .toLowerCase()
-      .replace(/\s+/g, "_")        // replace spaces with underscores
-      .replace(/[()]/g, "")        // remove parentheses
-      .replace(/[^a-z0-9_-]/g, ""); // remove any other invalid chars
+    const folderName = normalizeUploadFilePath(fileType);
       
     const filePath = `${folderName}/${upload_file_name}`;
 

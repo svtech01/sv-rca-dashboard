@@ -32,16 +32,16 @@ export default function AdminPage() {
           Configure dashboard settings and manage data files
         </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className=" gap-6">
         {/* Configuration Settings */}
-        <SettingsForm />
-
-        {/* Data Files Status */}
-        <FileStatuses ref={fileStatusesRef} />
+        <SettingsForm />        
       </div>
 
       {/* Upload Data Files */}
       <PowerlistSettings onUploadSuccess={handleUploadSuccess} />
+
+      {/* Data Files Status */}
+      <FileStatuses ref={fileStatusesRef} />
 
       {/* Export Options */}
         <Card className="mt-8 mb-5">

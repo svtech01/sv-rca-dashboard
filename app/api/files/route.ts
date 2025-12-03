@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseServerClient";
+import { normalizeUploadFilePath } from "@/services/PowerlistService";
 
 const FOLDERS = {
   "Kixie Call History": "kixie_call_history",
@@ -9,6 +10,65 @@ const FOLDERS = {
 };
 
 export async function GET() {
+  try {
+    // 1. Get powerlist types from DB
+    const { data: types, error: typesError } = await supabase
+      .from("powerlist_types")
+      .select("*");
+
+    if (typesError) {
+      return NextResponse.json({ error: typesError.message }, { status: 500 });
+    }
+
+    const results = [];
+
+    // 2. Loop through each type and read its storage folder
+    for (const type of types) {
+
+      const folderName = normalizeUploadFilePath(type.name);
+
+      const { data: files, error: filesError } = await supabase.storage
+        .from("live-data-files")
+        .list(folderName, { limit: 100 });
+
+      if (filesError) {
+        results.push({
+          ...type,
+          files: [],
+          error: filesError.message,
+        });
+        continue;
+      }
+
+      // 3. Generate public URLs for each file
+      const filesWithUrls = files.map((file) => {
+        const { data: publicUrl } = supabase.storage
+          .from("live-data-files")
+          .getPublicUrl(`${type.name}/${file.name}`);
+
+        return {
+          name: file.name,
+          updated_at: file.updated_at,
+          url: publicUrl.publicUrl,
+        };
+      });
+
+      results.push({
+        ...type,
+        files: filesWithUrls,
+      });
+    }
+
+    console.log("/api/files", results);
+
+    // 4. Return combined results
+    return NextResponse.json({ types: results });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function GETX() {
   try {
     const bucket = process.env.SUPABASE_BUCKET || "test-data-files";
 
