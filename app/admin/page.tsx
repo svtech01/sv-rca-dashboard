@@ -8,8 +8,9 @@ import Footer from "@/components/Footer";
 
 import { useState, useRef, useEffect } from "react";
 import SettingsForm from "./components/forms/settings";
-import UploadForm from "./components/forms/upload";
+import UploadForm from "./components/forms/powerlist";
 import FileStatuses from "./components/status";
+import PowerlistSettings from "./components/forms/powerlist";
 
 export default function AdminPage() {
 
@@ -40,7 +41,7 @@ export default function AdminPage() {
       </div>
 
       {/* Upload Data Files */}
-      <UploadForm onUploadSuccess={handleUploadSuccess} />
+      <PowerlistSettings onUploadSuccess={handleUploadSuccess} />
 
       {/* Export Options */}
         <Card className="mt-8 mb-5">

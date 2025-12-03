@@ -9,12 +9,8 @@ export async function POST(req: Request) {
     const { fileType, upload_file_name } = await req.json();
 
     if (!fileType) {
+      console.log("Missing file type", fileType);
       return NextResponse.json({ error: "Missing file type" }, { status: 400 });
-    }
-
-    const fileName = FILE_MAP[fileType];
-    if (!fileName) {
-      return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
     const bucket = process.env.SUPABASE_BUCKET || "test-data-files";
@@ -42,7 +38,7 @@ export async function POST(req: Request) {
       signedUrl: data.signedUrl,
       path: data.path,
       bucket,
-      fileName,
+      fileName: upload_file_name,
     });
 
   } catch (error: any) {

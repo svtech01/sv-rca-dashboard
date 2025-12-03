@@ -5,7 +5,7 @@ import { loadCSVData } from "@/lib/loaders";
 import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
 import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
 import { CooldownManager } from "@/lib/metrics/CooldownManager";
-import { getBaselineMetrics, getDataHygieneMetrics } from "@/services/SupabaseMetricsService";
+import { getBaselineMetrics, getDataHygieneMetrics, getReattemptPotential } from "@/services/SupabaseMetricsService";
 
 const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
 
@@ -13,6 +13,7 @@ export async function GET(req: Request) {
 
   const baseline = await getBaselineMetrics();
   const hygiene = await getDataHygieneMetrics();
+  const cooldown = await getReattemptPotential();
 
   // console.log("Baseline Metrics:", baseline);
   // console.log("Data Hygiene Metrics:", hygiene);
@@ -20,6 +21,7 @@ export async function GET(req: Request) {
   const metrics = {
     baseline: baseline,
     validation: hygiene,
+    cooldown: cooldown,
   }
 
   return NextResponse.json(metrics, { status: 200 });

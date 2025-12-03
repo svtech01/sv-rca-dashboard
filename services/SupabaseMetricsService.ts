@@ -1,3 +1,4 @@
+
 import { supabase, telesignSupabase } from "@/lib/supabaseServerClient";
 
 export async function getBaselineMetrics() {
@@ -20,7 +21,7 @@ export async function getBaselineMetrics() {
 }
 
 export async function getDataHygieneMetrics() {
-  
+
   // 1️⃣ Fetch telesign contacts
   const { data: telesignData, error: telesignError } = await telesignSupabase
     .from("contacts")
@@ -66,10 +67,23 @@ export async function getDataHygieneMetrics() {
     validated_dialed_pct: totalValidated > 0 ? parseFloat(((validatedDialedCount / totalValidated) * 100).toFixed(2)) : 0,
   };
 
-  
-
 }
 
 export async function getReattemptPotential() {
-  
+
+  const maxAttempts = 20
+  const cooldownDays = 7
+
+  const { data, error } = await supabase
+    .rpc("get_cooldown_contacts", { max_attempts: maxAttempts, cooldown_days_param: cooldownDays });
+
+  if (error) throw error;
+
+  return data?.[0] ?? {
+    cooldown_contacts_count: 0,
+    reattempt_potential: 0,
+    target_kpi: 15,
+    cooldown_days: cooldownDays,
+    cooldown_contacts: []
+  };
 }
