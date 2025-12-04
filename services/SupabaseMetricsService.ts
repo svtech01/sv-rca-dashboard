@@ -128,3 +128,32 @@ export async function getReattemptPotential() {
     cooldown_contacts: []
   };
 }
+
+export async function getWeeklyTrends() {
+
+  try {
+    const { data, error } = await supabase.rpc("get_weekly_trends").single<{
+      week_label: string[]; 
+      total_calls: number[]; 
+      connected_calls: number[]; 
+      voicemail_calls: number[]; 
+      no_answer_calls: number[]
+    }>();
+
+    if (error) {
+      console.error("Metrics RPC error:", error);
+      throw new Error("Failed to load baseline metrics");
+    }
+
+    return {
+      weeks: data.week_label,
+      total_calls: data.total_calls,
+      connected_calls: data.connected_calls,
+      voicemail_calls: data.voicemail_calls,
+      no_answer_calls: data.no_answer_calls,
+    };
+
+  } catch (error) {
+    return error
+  }
+}
