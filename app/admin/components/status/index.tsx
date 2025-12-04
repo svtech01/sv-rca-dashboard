@@ -88,9 +88,9 @@ const FileStatuses = forwardRef(({ }, ref) => {
                   {fileCount} {fileCount === 1 ? "file" : "files"} loaded
                 </p>
                                 
-                {item.files?.map((fileItem) => {
+                {item.files?.map((fileItem, i) => {
                   return (
-                    <div className="mb-3">
+                    <div key={i} className="mb-3">
                       <p>* {fileItem.name}</p>
                       <span><small>uploaded on {fileItem.updated_at}</small></span>
                     </div>

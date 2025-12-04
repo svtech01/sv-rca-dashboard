@@ -69,6 +69,47 @@ export async function getDataHygieneMetrics() {
 
 }
 
+export async function getPilotMetrics() {
+
+  const sampleSize = 100;
+  const testDurationDays = 3;
+  const { data: config, error: configError } = await supabase.from("app_config_settings").select("*").eq("id", 1).single();
+
+  if (configError) {
+    console.error("Config fetch error:", configError);
+    throw new Error("Failed to fetch config");
+  }
+
+  const rpcForAll = "get_baseline_pilot_metrics";
+  const rpcForType = "get_pilot_metrics";
+
+  const { data, error } = await supabase
+    .rpc(rpcForType, {
+      pilot_list_name: config?.pilot_list_name,
+      target_uplift_pct: config?.target_connect,
+      success_uplift_pct: config?.success_connect,
+      test_duration: testDurationDays,
+      sample_limit: sampleSize
+    }).single<{ target_connect_rate: number }>();
+
+  if (error) console.error(error);
+
+  console.log(data);
+
+  return {
+    sample_size: sampleSize,
+    target_connect_uplift_pct: config?.target_connect,
+    target_connect_rate: data?.target_connect_rate ? Number(data?.target_connect_rate?.toFixed(2)) : 0,
+    success_connect_uplift_pct: config?.success_connect,
+    success_voicemail_uplift_pct: config?.success_voicemail,
+    test_duration_days: testDurationDays,
+    dial_at_a_time: config?.dial_at_a_time,
+    max_attempts: config?.max_attempts,
+    rpc: data
+  };
+
+}
+
 export async function getReattemptPotential() {
 
   const maxAttempts = 20
