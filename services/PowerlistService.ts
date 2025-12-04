@@ -140,3 +140,30 @@ export async function addToPowerlist(csvData: string, type: string) {
     };
   }
 }
+
+export async function getPowerlistConfigs() {
+  try {
+
+    const { data: list, error: listError } = await supabase.from("powerlist_types").select("*").order("id");
+    if(listError) throw new Error(listError.message);
+
+    const { data: config, error: configError } = await supabase.from("app_config_settings")
+      .select("pilot_list_name")
+      .eq("id", 1)
+      .single();
+
+    if(configError) throw new Error(configError.message);
+    
+    return {
+      list: list,
+      pilot: config?.pilot_list_name
+    }
+
+  } catch (error) {
+    console.log(error)
+    return {
+      list: [],
+      pilot: ''
+    };
+  }
+}

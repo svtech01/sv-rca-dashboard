@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabaseServerClient";
 import { NextRequest, NextResponse } from "next/server";
 
 // DELETE /api/powerlist/types/:id
-export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+
   const { id } = await context.params;
 
   const { error } = await supabase
@@ -18,7 +19,7 @@ export async function DELETE(req: NextRequest, context: { params: { id: string }
 }
 
 // PUT /api/powerlist/types/:id
-export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
   const body = await req.json();
   const { name } = body;

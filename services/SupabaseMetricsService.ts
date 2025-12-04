@@ -1,8 +1,83 @@
 
 import { supabase, telesignSupabase } from "@/lib/supabaseServerClient";
 
-export async function getBaselineMetrics() {
-  const { data, error } = await supabase.rpc("calculate_baseline_metrics");
+type FilterOptions = "all" | "today" | "week" | "month" | "";
+
+export async function getKixieCallTimespan(timeFilter: FilterOptions) {
+  try {
+    // Build dynamic filter date
+    let filterDate: string | null = null;
+    const now = new Date();
+
+    if (timeFilter === "today") {
+      filterDate = now.toISOString().split("T")[0];
+    }
+
+    if (timeFilter === "week") {
+      const firstDay = new Date(now);
+      firstDay.setDate(now.getDate() - now.getDay());
+      filterDate = firstDay.toISOString().split("T")[0];
+    }
+
+    if (timeFilter === "month") {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      filterDate = firstDay.toISOString().split("T")[0];
+    }
+
+    // 🟦 Separate queries so order does NOT conflict
+    let earliestQuery = supabase.from("kixie_call_logs").select("calldate");
+    let latestQuery = supabase.from("kixie_call_logs").select("calldate");
+
+    if (filterDate) {
+      earliestQuery = earliestQuery.gte("calldate", filterDate);
+      latestQuery = latestQuery.gte("calldate", filterDate);
+    }
+
+    const { data: minData, error: minError } = await earliestQuery
+      .order("calldate", { ascending: true })
+      .limit(1);
+
+    const { data: maxData, error: maxError } = await latestQuery
+      .order("calldate", { ascending: false })
+      .limit(1);
+
+    if (minError) throw minError;
+    if (maxError) throw maxError;
+
+    if (!minData?.[0]?.calldate || !maxData?.[0]?.calldate) {
+      return { earliest: null, latest: null, timespanDays: 0 };
+    }
+
+    const earliest = new Date(minData[0].calldate);
+    const latest = new Date(maxData[0].calldate);
+
+    const timespanMs = latest.getTime() - earliest.getTime();
+    const timespanDays = Math.ceil(timespanMs / (1000 * 60 * 60 * 24));
+
+    const formatOptions: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "long",
+      day: "2-digit",
+    };
+
+    return {
+      earliest: earliest.toLocaleDateString("en-US", formatOptions),
+      latest: latest.toLocaleDateString("en-US", formatOptions),
+      timespanDays,
+    };
+
+  } catch (err: any) {
+    console.error("Error fetching timespan:", err);
+    return { earliest: null, latest: null, timespanDays: 0, error: err.message };
+  }
+}
+
+// Kixie
+export async function getBaselineMetrics(filter: FilterOptions) {
+
+  const { data, error } = await supabase.rpc("calculate_baseline_metrics_filtered", {
+    time_filter: filter
+  });
 
   if (error) {
     console.error("Metrics RPC error:", error);
@@ -20,6 +95,7 @@ export async function getBaselineMetrics() {
   };
 }
 
+// Telesign
 export async function getDataHygieneMetrics() {
 
   // 1️⃣ Fetch telesign contacts
@@ -44,7 +120,7 @@ export async function getDataHygieneMetrics() {
   }
 
   const totalValidated = telesignData.length;
-  console.log(telesignData.slice(0, 10));
+  // console.log(telesignData.slice(0, 10));
 
   // Reachable count
   const reachableCount = telesignData.filter((r) => r.is_reachable === true).length;
@@ -69,7 +145,8 @@ export async function getDataHygieneMetrics() {
 
 }
 
-export async function getPilotMetrics() {
+// Powerlist
+export async function getPilotMetrics(filterByTime: FilterOptions, filterByList: string) {
 
   const sampleSize = 100;
   const testDurationDays = 3;
@@ -80,21 +157,34 @@ export async function getPilotMetrics() {
     throw new Error("Failed to fetch config");
   }
 
-  const rpcForAll = "get_baseline_pilot_metrics";
-  const rpcForType = "get_pilot_metrics";
+  let queryFunction = "";
+  let queryParams = {
+    pilot_list_name: config?.pilot_list_name,
+    target_uplift_pct: config?.target_connect,
+    success_uplift_pct: config?.success_connect,
+    test_duration: testDurationDays,
+    sample_limit: sampleSize,
+    date_filter: filterByTime
+  }
+
+  if(filterByList.toLowerCase() == "all"){
+    // Get all powerlist
+    queryFunction = "get_baseline_pilot_metrics_filtered";
+  }else{
+    // Get from specific powerlist
+    queryFunction = "get_pilot_metrics_by_list_filtered";
+    queryParams.pilot_list_name = filterByList
+  }
+
+  console.log("Query Function to run:", queryFunction);
+  console.log("Query Params: ", queryParams);
 
   const { data, error } = await supabase
-    .rpc(rpcForType, {
-      pilot_list_name: config?.pilot_list_name,
-      target_uplift_pct: config?.target_connect,
-      success_uplift_pct: config?.success_connect,
-      test_duration: testDurationDays,
-      sample_limit: sampleSize
-    }).single<{ target_connect_rate: number }>();
+    .rpc(queryFunction, queryParams).single<{ target_connect_rate: number }>();
 
   if (error) console.error(error);
 
-  console.log(data);
+  // console.log(data);
 
   return {
     sample_size: sampleSize,

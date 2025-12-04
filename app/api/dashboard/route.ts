@@ -5,25 +5,38 @@ import { loadCSVData } from "@/lib/loaders";
 import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
 import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
 import { CooldownManager } from "@/lib/metrics/CooldownManager";
-import { getBaselineMetrics, getDataHygieneMetrics, getPilotMetrics, getReattemptPotential } from "@/services/SupabaseMetricsService";
+import { getBaselineMetrics, getDataHygieneMetrics, getKixieCallTimespan, getPilotMetrics, getReattemptPotential } from "@/services/SupabaseMetricsService";
+import { getPowerlistConfigs } from "@/services/PowerlistService";
 
 const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
 
 export async function GET(req: Request) {
 
+  // Get filtering params
+  const { searchParams } = new URL(req.url);
+  const filter = (searchParams.get("filter") || "") as
+    | ""
+    | "all"
+    | "today"
+    | "week"
+    | "month";
+
+  const timespan = await getKixieCallTimespan();
   const baseline = await getBaselineMetrics();
   const hygiene = await getDataHygieneMetrics();
   const cooldown = await getReattemptPotential();
   const pilot = await getPilotMetrics();
 
-  // console.log("Baseline Metrics:", baseline);
-  // console.log("Data Hygiene Metrics:", hygiene);
+  // Get Powerlist Types and Pilot List name
+  const powerlistConfigs = await getPowerlistConfigs();
 
   const metrics = {
+    timespan: timespan,
     baseline: baseline,
     validation: hygiene,
     cooldown: cooldown,
-    pilot: pilot
+    pilot: pilot,
+    powerlistConfig: powerlistConfigs
   }
 
   return NextResponse.json(metrics, { status: 200 });
