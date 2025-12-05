@@ -15,25 +15,25 @@ const RenderSkeleton = () => {
       <div className="flex justify-between items-center mb-5">
         <h2 className="text-xl font-semibold text-gray-700">Powerlist</h2>        
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" style={{height: 150}}>
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Sample Size</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-yellow-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Target Connect Rate</CardTitle></CardHeader>          
-          <CardContent><center><Spinner className="bg-blue-600" /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-600 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Success Criteria</CardTitle></CardHeader>
-          <CardContent><center><Spinner className="bg-blue-400" /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-400 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Test Duration</CardTitle></CardHeader>
-          <CardContent><center><Spinner className="bg-yellow-500" /></center></CardContent>
+          <CardContent><center><Spinner className="text-yellow-500 size-7" /></center></CardContent>
         </Card>
       </div>
     </section>
@@ -42,7 +42,7 @@ const RenderSkeleton = () => {
 
 export const PilotMetrics = ({ filter }: PilotProps) => {
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [pilot, setPilot] = useState<any>(null);
   const [powerlistConfig, setPowerlistConfig] = useState<any>(null);
   const [selectedList, setSelectedList] = useState<string>('All');
@@ -56,6 +56,7 @@ export const PilotMetrics = ({ filter }: PilotProps) => {
 
       setPilot(result?.pilot);
       setPowerlistConfig(result?.powerlistConfig);
+      setLoading(false);
 
     } catch (error) {
       setLoading(false);
@@ -72,7 +73,7 @@ export const PilotMetrics = ({ filter }: PilotProps) => {
     fetchMetrics(filter, selectedList);
   }, [filter])
 
-  if (!pilot) return <RenderSkeleton />
+  if (loading) return <RenderSkeleton />
 
   return (
     <section className="mb-10">

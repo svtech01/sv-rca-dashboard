@@ -12,20 +12,20 @@ const RenderSkeleton = () => {
   return (
     <section className="mb-10">
       <h2 className="text-xl font-semibold text-gray-700 mb-5">Reattempt / Cooldown</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" style={{height: 150}}>
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Cooldown Contacts</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-yellow-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Reattempt Potential</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-green-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Target KPI</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-700 size-7" /></center></CardContent>
         </Card>
       </div>
     </section>
@@ -34,7 +34,7 @@ const RenderSkeleton = () => {
 
 export const CooldownMetrics = ({filter}: CooldownMetricsProps) => {
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [cooldown, setCooldown] = useState<any>(null);
 
   const fetchMetrics = async (filterBy: string) => {
@@ -45,6 +45,7 @@ export const CooldownMetrics = ({filter}: CooldownMetricsProps) => {
       const result = await res.json();
 
       setCooldown(result);
+      setLoading(false);
 
     } catch (error) {
       setLoading(false);
@@ -56,7 +57,7 @@ export const CooldownMetrics = ({filter}: CooldownMetricsProps) => {
     fetchMetrics(filter);
   }, [filter])
 
-  if(!cooldown) return <RenderSkeleton />
+  if(loading) return <RenderSkeleton />
 
   return (
     <section className="mb-10">

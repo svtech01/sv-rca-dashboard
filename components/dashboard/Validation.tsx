@@ -12,25 +12,25 @@ const RenderSkeleton = () => {
   return (
     <section className="mb-10">
       <h2 className="text-xl font-semibold text-gray-700 mb-5">Data Hygiene</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" style={{height: 150}}>
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Total Validated</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-700 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Reachable</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-green-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Without Phone ID Live</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-red-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Validated & Dialed</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-500 size-7" /></center></CardContent>
         </Card>
       </div>
     </section>
@@ -39,7 +39,7 @@ const RenderSkeleton = () => {
 
 export const DataHygeineMetrics = () => {
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [validation, setValidation] = useState<any>(null);
 
   const fetchMetrics = async () => {
@@ -50,6 +50,7 @@ export const DataHygeineMetrics = () => {
       const result = await res.json();
 
       setValidation(result);
+      setLoading(false);
 
     } catch (error) {
       setLoading(false);
@@ -61,7 +62,7 @@ export const DataHygeineMetrics = () => {
     fetchMetrics();
   }, [])
 
-  if(!validation) return <RenderSkeleton />
+  if(loading) return <RenderSkeleton />
 
   return (
     <section className="mb-10">

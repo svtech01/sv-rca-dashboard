@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     | "week"
     | "month";
 
-  const cooldown = await getReattemptPotential();
-  console.log(cooldown);
+  const cooldown = await getReattemptPotential(filter);
+  // console.log(cooldown);
   return NextResponse.json(cooldown, { status: 200 });
 }

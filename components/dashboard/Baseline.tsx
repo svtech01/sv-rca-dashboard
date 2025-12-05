@@ -9,28 +9,29 @@ interface BaselineProps {
 }
 
 const RenderSkeleton = () => {
+
   return (
     <section className="mb-10">
       <h2 className="text-xl font-semibold text-gray-700 mb-5">Baseline Metrics</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" style={{height: 150}}>
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Connect Rate</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-700 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Answer Event %</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-blue-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Avg Attempts Lost-Race</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-yellow-500 size-7" /></center></CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Cooldown / Day</CardTitle></CardHeader>
-          <CardContent><center><Spinner /></center></CardContent>
+          <CardContent><center><Spinner className="text-red-500 size-7" /></center></CardContent>
         </Card>
       </div>
     </section>
@@ -39,7 +40,7 @@ const RenderSkeleton = () => {
 
 export const BaselineMetrics = ({ filter }: BaselineProps) => {
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [baseline, setBaseline] = useState<any>(null);
   const [timespan, setTimespan] = useState<any>(null);
 
@@ -52,7 +53,7 @@ export const BaselineMetrics = ({ filter }: BaselineProps) => {
 
       setTimespan(result?.timespan);
       setBaseline(result?.baseline);
-      
+      setLoading(false);
 
     } catch (error) {
       setLoading(false);
@@ -64,7 +65,7 @@ export const BaselineMetrics = ({ filter }: BaselineProps) => {
     fetchMetrics(filter);
   }, [filter])
 
-  if (!baseline) return <RenderSkeleton />
+  if (loading) return <RenderSkeleton />
 
   return (
     <div>

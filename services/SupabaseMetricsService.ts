@@ -176,8 +176,8 @@ export async function getPilotMetrics(filterByTime: FilterOptions, filterByList:
     queryParams.pilot_list_name = filterByList
   }
 
-  console.log("Query Function to run:", queryFunction);
-  console.log("Query Params: ", queryParams);
+  // console.log("Query Function to run:", queryFunction);
+  // console.log("Query Params: ", queryParams);
 
   const { data, error } = await supabase
     .rpc(queryFunction, queryParams).single<{ target_connect_rate: number }>();
@@ -200,13 +200,21 @@ export async function getPilotMetrics(filterByTime: FilterOptions, filterByList:
 
 }
 
-export async function getReattemptPotential() {
+export async function getReattemptPotential(filter: FilterOptions) {
 
-  const maxAttempts = 20
-  const cooldownDays = 7
+  const { data: config, error: configError } = await supabase.from("app_config_settings").select("*").eq("id", 1).single();
+
+  if (configError) {
+    console.error("Config fetch error:", configError);
+    throw new Error("Failed to fetch config");
+  }
 
   const { data, error } = await supabase
-    .rpc("get_cooldown_contacts", { max_attempts: maxAttempts, cooldown_days_param: cooldownDays });
+    .rpc("get_cooldown_contacts_filtered", { 
+      max_attempts: config?.max_attempts, 
+      cooldown_days_param: config?.cooldown_days,
+      date_filter: filter
+    });
 
   if (error) throw error;
 
@@ -214,7 +222,7 @@ export async function getReattemptPotential() {
     cooldown_contacts_count: 0,
     reattempt_potential: 0,
     target_kpi: 15,
-    cooldown_days: cooldownDays,
+    cooldown_days: config?.cooldown_days,
     cooldown_contacts: []
   };
 }

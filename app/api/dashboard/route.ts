@@ -1,116 +1,116 @@
-import { NextResponse } from "next/server";
-import { supabase, telesignSupabase } from "@/lib/supabaseServerClient";
+// import { NextResponse } from "next/server";
+// import { supabase, telesignSupabase } from "@/lib/supabaseServerClient";
 
-import { loadCSVData } from "@/lib/loaders";
-import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
-import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
-import { CooldownManager } from "@/lib/metrics/CooldownManager";
-import { getBaselineMetrics, getDataHygieneMetrics, getKixieCallTimespan, getPilotMetrics, getReattemptPotential } from "@/services/SupabaseMetricsService";
-import { getPowerlistConfigs } from "@/services/PowerlistService";
+// import { loadCSVData } from "@/lib/loaders";
+// import { MetricsCalculator } from "@/lib/metrics/MetricsCalculator";
+// import { ValidationMerger } from "@/lib/metrics/ValidationMerger";
+// import { CooldownManager } from "@/lib/metrics/CooldownManager";
+// import { getBaselineMetrics, getDataHygieneMetrics, getKixieCallTimespan, getPilotMetrics, getReattemptPotential } from "@/services/SupabaseMetricsService";
+// import { getPowerlistConfigs } from "@/services/PowerlistService";
 
-const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
+// const CACHE_TTL_MINUTES = 30; // cache for 30 minutes
 
-export async function GET(req: Request) {
+// export async function GET(req: Request) {
 
-  // Get filtering params
-  const { searchParams } = new URL(req.url);
-  const filter = (searchParams.get("filter") || "") as
-    | ""
-    | "all"
-    | "today"
-    | "week"
-    | "month";
+//   // Get filtering params
+//   const { searchParams } = new URL(req.url);
+//   const filter = (searchParams.get("filter") || "") as
+//     | ""
+//     | "all"
+//     | "today"
+//     | "week"
+//     | "month";
 
-  const timespan = await getKixieCallTimespan();
-  const baseline = await getBaselineMetrics();
-  const hygiene = await getDataHygieneMetrics();
-  const cooldown = await getReattemptPotential();
-  const pilot = await getPilotMetrics();
+//   const timespan = await getKixieCallTimespan();
+//   const baseline = await getBaselineMetrics();
+//   const hygiene = await getDataHygieneMetrics();
+//   const cooldown = await getReattemptPotential();
+//   const pilot = await getPilotMetrics();
 
-  // Get Powerlist Types and Pilot List name
-  const powerlistConfigs = await getPowerlistConfigs();
+//   // Get Powerlist Types and Pilot List name
+//   const powerlistConfigs = await getPowerlistConfigs();
 
-  const metrics = {
-    timespan: timespan,
-    baseline: baseline,
-    validation: hygiene,
-    cooldown: cooldown,
-    pilot: pilot,
-    powerlistConfig: powerlistConfigs
-  }
+//   const metrics = {
+//     timespan: timespan,
+//     baseline: baseline,
+//     validation: hygiene,
+//     cooldown: cooldown,
+//     pilot: pilot,
+//     powerlistConfig: powerlistConfigs
+//   }
 
-  return NextResponse.json(metrics, { status: 200 });
-}
+//   return NextResponse.json(metrics, { status: 200 });
+// }
 
-// --- Main API route ---
-export async function GETX(req: Request) {
-  try {
-    // 1️⃣ Try to load cached metrics
-    const { data: cachedRows } = await supabase
-      .from("dashboard_cache")
-      .select("*")
-      .order("last_updated", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+// // --- Main API route ---
+// export async function GETX(req: Request) {
+//   try {
+//     // 1️⃣ Try to load cached metrics
+//     const { data: cachedRows } = await supabase
+//       .from("dashboard_cache")
+//       .select("*")
+//       .order("last_updated", { ascending: false })
+//       .limit(1)
+//       .maybeSingle();
 
-    if (cachedRows && cachedRows.last_updated) {
-      const ageMs = Date.now() - new Date(cachedRows.last_updated).getTime();
-      const ageMinutes = ageMs / 1000 / 60;
+//     if (cachedRows && cachedRows.last_updated) {
+//       const ageMs = Date.now() - new Date(cachedRows.last_updated).getTime();
+//       const ageMinutes = ageMs / 1000 / 60;
 
-      if (ageMinutes < CACHE_TTL_MINUTES) {
-        console.log(`✅ Returning cached dashboard metrics (${ageMinutes.toFixed(1)} min old)`);
-        return NextResponse.json({
-          ...cachedRows.metrics,
-          last_updated: cachedRows.last_updated,
-          cached: true,
-        });
-      }
-    }
+//       if (ageMinutes < CACHE_TTL_MINUTES) {
+//         console.log(`✅ Returning cached dashboard metrics (${ageMinutes.toFixed(1)} min old)`);
+//         return NextResponse.json({
+//           ...cachedRows.metrics,
+//           last_updated: cachedRows.last_updated,
+//           cached: true,
+//         });
+//       }
+//     }
 
-    // Get filtering params
-    const { searchParams } = new URL(req.url);
-    const filter = (searchParams.get("filter") || "") as
-    | ""
-    | "all"
-    | "today"
-    | "week"
-    | "month";
+//     // Get filtering params
+//     const { searchParams } = new URL(req.url);
+//     const filter = (searchParams.get("filter") || "") as
+//     | ""
+//     | "all"
+//     | "today"
+//     | "week"
+//     | "month";
 
-    // 2️⃣ Load CSVs and compute metrics
-    console.log("♻️ Cache expired, recomputing dashboard metrics...");
-    const data = await loadCSVData(filter);
+//     // 2️⃣ Load CSVs and compute metrics
+//     console.log("♻️ Cache expired, recomputing dashboard metrics...");
+//     const data = await loadCSVData(filter);
 
-    const metricCalc = new MetricsCalculator(data);
-    const validationMerger = new ValidationMerger(data);
-    const cooldownManager = new CooldownManager(data);
+//     const metricCalc = new MetricsCalculator(data);
+//     const validationMerger = new ValidationMerger(data);
+//     const cooldownManager = new CooldownManager(data);
 
-    const metrics = {
-      baseline: metricCalc.calculateBaselineMetrics(),
-      pilot: metricCalc.calculatePilotMetrics(),
-      validation: validationMerger.calculateDataHygieneMetrics(),
-      cooldown: cooldownManager.calculateReattemptPotential(),
-    };
+//     const metrics = {
+//       baseline: metricCalc.calculateBaselineMetrics(),
+//       pilot: metricCalc.calculatePilotMetrics(),
+//       validation: validationMerger.calculateDataHygieneMetrics(),
+//       cooldown: cooldownManager.calculateReattemptPotential(),
+//     };
 
-    const now = new Date().toISOString();
+//     const now = new Date().toISOString();
 
-    // 3️⃣ Save to cache
-    const _cache = await supabase.from("dashboard_cache").upsert({
-      id: "dashboard_cache_latest",
-      metrics,
-      // data,
-      last_updated: now,
-    });
+//     // 3️⃣ Save to cache
+//     const _cache = await supabase.from("dashboard_cache").upsert({
+//       id: "dashboard_cache_latest",
+//       metrics,
+//       // data,
+//       last_updated: now,
+//     });
 
-    if(_cache){
-      console.log("✅ Dashboard metrics cached successfully");
-    }
+//     if(_cache){
+//       console.log("✅ Dashboard metrics cached successfully");
+//     }
 
-    return NextResponse.json({ ...metrics, last_updated: now, cached: false });
-  } catch (err: any) {
-    console.error("Dashboard metrics error:", err);
-    return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
+//     return NextResponse.json({ ...metrics, last_updated: now, cached: false });
+//   } catch (err: any) {
+//     console.error("Dashboard metrics error:", err);
+//     return NextResponse.json(
+//       { error: err.message || "Internal Server Error" },
+//       { status: 500 }
+//     );
+//   }
+// }
