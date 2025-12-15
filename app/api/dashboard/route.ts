@@ -1,4 +1,4 @@
-// import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 // import { supabase, telesignSupabase } from "@/lib/supabaseServerClient";
 
 // import { loadCSVData } from "@/lib/loaders";
@@ -114,3 +114,8 @@
 //     );
 //   }
 // }
+
+
+export async function GET(req: Request) {
+  return NextResponse.json({}, { status: 200 });
+}
