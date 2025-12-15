@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { normalizeCSV } from "@/lib/normalizer";
 import { toastProvider } from "@/components/ToastService";
 import { uploadFile } from "@/services/FileManagerService";
-import { addToPowerlist } from "@/services/PowerlistService";
+import { addToPowerlist } from "@/services/client/PowerlistService";
 
 type PowerlistType = {
   id: number;
