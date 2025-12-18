@@ -103,14 +103,19 @@ export async function getBaselineMetrics(filter: FilterOptions) {
 }
 
 // Telesign
-export async function getDataHygieneMetrics() {
+export async function getDataHygieneMetrics(filter: FilterOptions) {
 
   try {
     // 1️⃣ Fetch telesign contacts
-    const { data: telesignData, error: telesignError } = await telesignSupabase
-      .from("contacts")
-      .select("phone_number_e164, is_reachable", { count: "exact" })
-      .limit(1000000); // <-- fetch all rows
+    // const { data: telesignData, error: telesignError } = await telesignSupabase
+    //   .from("contacts")
+    //   .select("phone_number_e164, is_reachable", { count: "exact" })
+    //   .limit(1000000); // <-- fetch all rows
+
+    // const { data, error } = await supabase
+    //   .rpc("calculate_baseline_metrics_filtered", { time_filter: filter });
+
+    const { data: telesignData, error: telesignError } = await telesignSupabase.rpc("get_contacts_with_count", { date_filter: filter });
 
     if (telesignError) {
       console.error("Telesign fetch error:", telesignError);
@@ -131,13 +136,13 @@ export async function getDataHygieneMetrics() {
     // console.log(telesignData.slice(0, 10));
 
     // Reachable count
-    const reachableCount = telesignData.filter((r) => r.is_reachable === true).length;
+    const reachableCount = telesignData.filter((r: any) => r.is_reachable === true).length;
 
     const invalidCount = totalValidated - reachableCount;
 
     // Validated numbers that were dialed
     const kixieNumbersSet = new Set(kixieData.map((k) => k.phone_normalized));
-    const validatedDialedCount = telesignData.filter((t) =>
+    const validatedDialedCount = telesignData.filter((t: any) =>
       kixieNumbersSet.has(t.phone_number_e164)
     ).length;
 

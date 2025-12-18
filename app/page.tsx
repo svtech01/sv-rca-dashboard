@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
           <PilotMetrics filter={filterBy} />
 
-          <DataHygeineMetrics />
+          <DataHygeineMetrics filter={filterBy} />
 
           <CooldownMetrics filter={filterBy} />
 

@@ -37,16 +37,16 @@ const RenderSkeleton = () => {
   )
 }
 
-export const DataHygeineMetrics = () => {
+export const DataHygeineMetrics = ({ filter }: DataHygeineMetricsProps) => {
 
   const [loading, setLoading] = useState(true);
   const [validation, setValidation] = useState<any>(null);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = async (filterBy: string) => {
     try {
       setLoading(true);
 
-      const res = await fetch(`/api/dashboard/validation`);
+      const res = await fetch(`/api/dashboard/validation?filter=${filterBy}`);
       const result = await res.json();
 
       setValidation(result);
@@ -59,8 +59,8 @@ export const DataHygeineMetrics = () => {
   }
 
   useEffect(() => {
-    fetchMetrics();
-  }, [])
+    fetchMetrics(filter);
+  }, [filter])
 
   if(loading) return <RenderSkeleton />
 

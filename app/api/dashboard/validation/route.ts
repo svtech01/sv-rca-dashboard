@@ -14,7 +14,7 @@ export async function GET(req: Request) {
       | "week"
       | "month";
 
-    const hygiene = await getDataHygieneMetrics();
+    const hygiene = await getDataHygieneMetrics(filter);
 
     return NextResponse.json(hygiene, { status: 200 });
   } catch (error) {
